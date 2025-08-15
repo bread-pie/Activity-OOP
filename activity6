@@ -1,1 +1,169 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
+class MenuItem
+{
+    public string Name;
+    public double Price;
+
+    public MenuItem(string name, double price)
+    {
+        if (price < 0)
+        {
+            throw new ArgumentException("Price cannot be negative.");
+        }
+        Name = name;
+        Price = price;
+    }
+}
+
+class Diner
+{
+    public string Name;
+    public List<MenuItem> Items; // Items assigned to this diner (not shared items)
+    public double TipPercent;
+
+    public Diner(string name, double tipPercent)
+    {
+        Name = name;
+        TipPercent = tipPercent >= 0 ? tipPercent : 0; // Ensure non-negative tip
+        Items = new List<MenuItem>();
+    }
+
+    // Sum of items prices
+    public double ItemsTotal()
+    {
+        return Items.Sum(item => item.Price);
+    }
+}
+
+class Program
+{
+    static double GetValidatedDouble(string prompt)
+    {
+        double val;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out val) && val >= 0)
+                return val;
+            Console.WriteLine("Invalid input, enter a non-negative number.");
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Restaurant Order Splitter ===");
+
+        // Step 1: Input menu items
+        Console.Write("Enter number of menu items: ");
+        int itemCount = int.Parse(Console.ReadLine());
+
+        List<MenuItem> menuItems = new List<MenuItem>();
+
+        for (int i = 0; i < itemCount; i++)
+        {
+            Console.Write($"\nItem {i + 1} name: ");
+            string itemName = Console.ReadLine();
+
+            double itemPrice = GetValidatedDouble("Price: ");
+
+            menuItems.Add(new MenuItem(itemName, itemPrice));
+        }
+
+        // Step 2: Input diners and their tips
+        Console.Write("\nEnter number of diners: ");
+        int dinerCount = int.Parse(Console.ReadLine());
+
+        List<Diner> diners = new List<Diner>();
+
+        for (int i = 0; i < dinerCount; i++)
+        {
+            Console.Write($"\nDiner {i + 1} name: ");
+            string dinerName = Console.ReadLine();
+
+            double tipPercent = GetValidatedDouble("Tip % (e.g. 10 for 10%): ");
+
+            diners.Add(new Diner(dinerName, tipPercent));
+        }
+
+        // Step 3: Assign items to diners
+        // Track shared items separately
+        List<MenuItem> sharedItems = new List<MenuItem>();
+
+        Console.WriteLine("\nAssign items to diners.");
+        Console.WriteLine("For each item, enter the names of diners sharing it, separated by commas.");
+        Console.WriteLine("If no diners assigned, item considered shared by all diners.");
+
+        foreach (var item in menuItems)
+        {
+            Console.Write($"\nWho is sharing '{item.Name}'? (comma-separated diner names or leave blank): ");
+            string input = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                // No assignments => shared by all diners
+                sharedItems.Add(item);
+            }
+            else
+            {
+                string[] assignedDiners = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                              .Select(s => s.Trim()).ToArray();
+
+                if (assignedDiners.Length == 0)
+                {
+                    // Treat as shared
+                    sharedItems.Add(item);
+                }
+                else
+                {
+                    // Assign item to each diner listed, validate diner exists
+                    foreach (string dinerName in assignedDiners)
+                    {
+                        var diner = diners.FirstOrDefault(d => d.Name.Equals(dinerName, StringComparison.OrdinalIgnoreCase));
+                        if (diner != null)
+                        {
+                            diner.Items.Add(item);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Warning: Diner '{dinerName}' not found. Item '{item.Name}' treated as shared.");
+                            sharedItems.Add(item);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Step 4: Get service charge %
+        double serviceChargePercent = GetValidatedDouble("\nEnter service charge % (e.g. 10 for 10%): ");
+
+        // Step 5: Calculate shared items cost per diner
+        double sharedTotal = sharedItems.Sum(item => item.Price);
+        double sharedPerDiner = dinerCount > 0 ? sharedTotal / dinerCount : 0;
+
+        // Step 6: Compute total per diner including shared items, service charge, tip
+        Console.WriteLine("\n--- Bill per diner ---");
+
+        foreach (var diner in diners)
+        {
+            double subtotal = diner.ItemsTotal() + sharedPerDiner;
+
+            // Add service charge
+            double serviceChargeAmount = subtotal * (serviceChargePercent / 100);
+
+            // Add tip
+            double tipAmount = subtotal * (diner.TipPercent / 100);
+
+            double total = subtotal + serviceChargeAmount + tipAmount;
+
+            Console.WriteLine($"{diner.Name}:");
+            Console.WriteLine($"  Items total (including shared): ₱{subtotal:F2}");
+            Console.WriteLine($"  Service charge ({serviceChargePercent}%): ₱{serviceChargeAmount:F2}");
+            Console.WriteLine($"  Tip ({diner.TipPercent}%): ₱{tipAmount:F2}");
+            Console.WriteLine($"  Total: ₱{total:F2}\n");
+        }
+    }
+}
