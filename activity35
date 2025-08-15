@@ -1,1 +1,129 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+// Student class with name and zone
+class Student
+{
+    public string Name { get; }
+    public string Zone { get; }
+
+    public Student(string name, string zone)
+    {
+        Name = name;
+        Zone = zone;
+    }
+}
+
+// Bus class with zone, capacity, and assigned students
+class Bus
+{
+    public string Zone { get; }
+    public int Capacity { get; }
+    public List<Student> AssignedStudents { get; }
+
+    public Bus(string zone, int capacity)
+    {
+        Zone = zone;
+        Capacity = capacity;
+        AssignedStudents = new List<Student>();
+    }
+
+    public bool TryAssign(Student student)
+    {
+        if (AssignedStudents.Count < Capacity)
+        {
+            AssignedStudents.Add(student);
+            return true;
+        }
+        return false;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        // Sample students
+        List<Student> students = new List<Student>
+        {
+            new Student("Alice", "North"),
+            new Student("Bob", "South"),
+            new Student("Charlie", "North"),
+            new Student("Diana", "East"),
+            new Student("Eve", "South"),
+            new Student("Frank", "West"),
+            new Student("Grace", "North"),
+            new Student("Hank", "West"),
+            new Student("Ivy", "East")
+        };
+
+        // Buses by zone
+        List<Bus> buses = new List<Bus>
+        {
+            new Bus("North", 2),
+            new Bus("South", 1),
+            new Bus("East", 1),
+            new Bus("West", 1),
+            new Bus("Any", 2) // Overflow bus
+        };
+
+        List<Student> unassigned = new List<Student>();
+
+        foreach (var student in students)
+        {
+            // Try to assign to bus matching zone
+            var bus = buses.FirstOrDefault(b => b.Zone == student.Zone && b.AssignedStudents.Count < b.Capacity);
+            if (bus != null)
+            {
+                bus.TryAssign(student);
+            }
+            else
+            {
+                // Try assigning to "Any" overflow bus
+                var overflowBus = buses.FirstOrDefault(b => b.Zone == "Any" && b.AssignedStudents.Count < b.Capacity);
+                if (overflowBus != null)
+                {
+                    overflowBus.TryAssign(student);
+                }
+                else
+                {
+                    unassigned.Add(student); // No space anywhere
+                }
+            }
+        }
+
+        // Output
+        Console.WriteLine("\nBus Manifests:");
+        foreach (var bus in buses)
+        {
+            Console.WriteLine($"\nBus for zone: {bus.Zone} (Capacity: {bus.Capacity})");
+            if (bus.AssignedStudents.Count == 0)
+            {
+                Console.WriteLine("  No students assigned.");
+            }
+            else
+            {
+                foreach (var student in bus.AssignedStudents)
+                {
+                    Console.WriteLine($"  - {student.Name} ({student.Zone})");
+                }
+            }
+        }
+
+        // Unassigned students
+        Console.WriteLine("\nUnassigned Students:");
+        if (unassigned.Count == 0)
+        {
+            Console.WriteLine("  All students assigned.");
+        }
+        else
+        {
+            foreach (var s in unassigned)
+            {
+                Console.WriteLine($"  - {s.Name} ({s.Zone})");
+            }
+        }
+    }
+}
 
