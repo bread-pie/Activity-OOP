@@ -1,1 +1,101 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Team
+{
+    public string Name { get; }
+    public int Points { get; private set; }
+    public int GoalDifference { get; private set; }
+    public int GoalsFor { get; private set; }
+    public int GoalsAgainst { get; private set; }
+
+    public Team(string name)
+    {
+        Name = name;
+        Points = 0;
+        GoalDifference = 0;
+        GoalsFor = 0;
+        GoalsAgainst = 0;
+    }
+
+    public void UpdateMatch(int goalsFor, int goalsAgainst)
+    {
+        GoalsFor += goalsFor;
+        GoalsAgainst += goalsAgainst;
+        GoalDifference = GoalsFor - GoalsAgainst;
+
+        if (goalsFor > goalsAgainst) Points += 3;
+        else if (goalsFor == goalsAgainst) Points += 1;
+        // else 0 points for loss
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("Enter team names separated by commas:");
+        var teamNames = Console.ReadLine().Split(',').Select(t => t.Trim()).ToList();
+
+        var teams = new Dictionary<string, Team>(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in teamNames)
+        {
+            if (!teams.ContainsKey(t))
+                teams[t] = new Team(t);
+        }
+
+        Console.WriteLine("Enter number of matches:");
+        if (!int.TryParse(Console.ReadLine(), out int n) || n < 1)
+        {
+            Console.WriteLine("Invalid number of matches.");
+            return;
+        }
+
+        Console.WriteLine("Enter matches in format: TeamA GoalsA TeamB GoalsB (e.g., Lions 3 Tigers 1)");
+
+        for (int i = 0; i < n; i++)
+        {
+            string line = Console.ReadLine();
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 4)
+            {
+                Console.WriteLine($"Skipping malformed line: {line}");
+                continue;
+            }
+
+            string teamA = parts[0];
+            string teamB = parts[2];
+            if (!teams.ContainsKey(teamA) || !teams.ContainsKey(teamB))
+            {
+                Console.WriteLine($"Skipping unknown team(s) in line: {line}");
+                continue;
+            }
+
+            if (!int.TryParse(parts[1], out int goalsA) || !int.TryParse(parts[3], out int goalsB))
+            {
+                Console.WriteLine($"Skipping line with invalid goals: {line}");
+                continue;
+            }
+
+            teams[teamA].UpdateMatch(goalsA, goalsB);
+            teams[teamB].UpdateMatch(goalsB, goalsA);
+        }
+
+        var standings = teams.Values
+            .OrderByDescending(t => t.Points)
+            .ThenByDescending(t => t.GoalDifference)
+            .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Console.WriteLine("\nStandings:");
+        Console.WriteLine("Pos | Team       | Pts | GD  | GF  | GA");
+        int pos = 1;
+        foreach (var team in standings)
+        {
+            Console.WriteLine($"{pos,3} | {team.Name,-10} | {team.Points,3} | {team.GoalDifference,3} | {team.GoalsFor,3} | {team.GoalsAgainst,3}");
+            pos++;
+        }
+    }
+}
 
