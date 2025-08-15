@@ -1,1 +1,107 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Product
+{
+    public string Brand;
+    public string Category;
+    public string Color;
+    public string Size;
+    public int Year;
+    public string CustomCode;
+
+    // Allowed lists
+    static readonly List<string> AllowedCategories = new List<string> { "ELECTRONICS", "CLOTHING", "FOOD" };
+    static readonly List<string> AllowedColors = new List<string> { "RED", "BLUE", "GREEN", "BLACK", "WHITE" };
+
+    public Product(string brand, string category, string color, string size, int year, string customCode = "")
+    {
+        Brand = brand.ToUpper();
+        Category = category.ToUpper();
+        Color = color.ToUpper();
+        Size = size.ToUpper();
+        Year = year;
+        CustomCode = customCode.ToUpper();
+
+        if (!AllowedCategories.Contains(Category))
+            throw new ArgumentException($"Invalid category: {category}");
+
+        if (!AllowedColors.Contains(Color))
+            throw new ArgumentException($"Invalid color: {color}");
+    }
+
+    // Generate SKU using:
+    // First 3 letters of brand,
+    // first 2 letters of category,
+    // first letter of color,
+    // size padded to 2 chars,
+    // last 2 digits of year,
+    // plus optional custom code at end
+    public string GenerateSku()
+    {
+        string brandPart = Brand.Length >= 3 ? Brand.Substring(0, 3) : Brand.PadRight(3, 'X');
+        string categoryPart = Category.Length >= 2 ? Category.Substring(0, 2) : Category.PadRight(2, 'X');
+        string colorPart = Color.Length >= 1 ? Color.Substring(0, 1) : "X";
+        string sizePart = Size.Length >= 2 ? Size.Substring(0, 2) : Size.PadRight(2, 'X');
+        string yearPart = (Year % 100).ToString("D2");
+
+        return $"{brandPart}{categoryPart}{colorPart}{sizePart}{yearPart}{CustomCode}";
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Product SKU Generator ===");
+
+        List<string> existingSkus = new List<string>();
+
+        while (true)
+        {
+            try
+            {
+                Console.Write("Enter Brand (or 'exit' to quit): ");
+                string brand = Console.ReadLine();
+                if (brand.ToLower() == "exit") break;
+
+                Console.Write("Enter Category (Electronics, Clothing, Food): ");
+                string category = Console.ReadLine();
+
+                Console.Write("Enter Color (Red, Blue, Green, Black, White): ");
+                string color = Console.ReadLine();
+
+                Console.Write("Enter Size: ");
+                string size = Console.ReadLine();
+
+                Console.Write("Enter Year (e.g., 2025): ");
+                int year = int.Parse(Console.ReadLine());
+
+                Console.Write("Enter Custom Code (optional): ");
+                string customCode = Console.ReadLine();
+
+                Product p = new Product(brand, category, color, size, year, customCode);
+                string sku = p.GenerateSku();
+
+                if (existingSkus.Contains(sku))
+                {
+                    Console.WriteLine("SKU already exists. Try changing attributes.");
+                }
+                else
+                {
+                    existingSkus.Add(sku);
+                    Console.WriteLine($"Generated SKU: {sku}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("Exiting Product SKU Generator.");
+    }
+}
 
