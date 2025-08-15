@@ -1,1 +1,64 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+class LogEntry
+{
+    public string Severity;
+    public string Code;
+
+    public static LogEntry Parse(string line)
+    {
+        // Pattern to find ERROR:<code> or WARN:<code>, case-insensitive
+        var match = Regex.Match(line, @"\b(ERROR|WARN):(\w+)", RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            return new LogEntry
+            {
+                Severity = match.Groups[1].Value.ToUpper(),
+                Code = match.Groups[2].Value.ToUpper()
+            };
+        }
+        return null;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Log Analyzer: Error Frequency ===");
+
+        Console.Write("Enter number of log lines: ");
+        int n = int.Parse(Console.ReadLine());
+
+        Dictionary<string, int> codeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < n; i++)
+        {
+            string line = Console.ReadLine();
+            LogEntry entry = LogEntry.Parse(line);
+            if (entry != null)
+            {
+                if (codeCounts.ContainsKey(entry.Code))
+                    codeCounts[entry.Code]++;
+                else
+                    codeCounts[entry.Code] = 1;
+            }
+        }
+
+        // Sort by frequency descending
+        var sorted = codeCounts.OrderByDescending(kvp => kvp.Value).ToList();
+
+        int total = codeCounts.Values.Sum();
+
+        Console.WriteLine("\nTop error/warn codes:");
+        foreach (var kvp in sorted)
+        {
+            double percent = total > 0 ? 100.0 * kvp.Value / total : 0;
+            Console.WriteLine($"{kvp.Key}: {kvp.Value} times ({percent:F2}%)");
+        }
+    }
+}
