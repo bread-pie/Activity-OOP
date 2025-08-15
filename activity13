@@ -1,1 +1,82 @@
 
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+class CsvRecord
+{
+    public List<object> Fields = new List<object>();
+
+    public void Parse(string line, char delimiter = ',')
+    {
+        Fields.Clear();
+
+        bool inQuotes = false;
+        string field = "";
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+
+            if (c == '"')
+            {
+                // Check for escaped quote
+                if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    field += '"';
+                    i++; // skip next quote
+                }
+                else
+                {
+                    inQuotes = !inQuotes; // toggle quotes state
+                }
+            }
+            else if (c == delimiter && !inQuotes)
+            {
+                Fields.Add(ConvertField(field));
+                field = "";
+            }
+            else
+            {
+                field += c;
+            }
+        }
+        // Add last field
+        Fields.Add(ConvertField(field));
+    }
+
+    // Try converting numeric strings to int or double, else string
+    private object ConvertField(string f)
+    {
+        f = f.Trim();
+
+        if (int.TryParse(f, NumberStyles.Integer, CultureInfo.InvariantCulture, out int iVal))
+            return iVal;
+        if (double.TryParse(f, NumberStyles.Float, CultureInfo.InvariantCulture, out double dVal))
+            return dVal;
+        return f;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== CSV Line Parser with Quotes ===");
+
+        Console.Write("Enter CSV line: ");
+        string line = Console.ReadLine();
+
+        Console.Write("Enter delimiter (default ','): ");
+        string delimInput = Console.ReadLine();
+        char delimiter = string.IsNullOrEmpty(delimInput) ? ',' : delimInput[0];
+
+        CsvRecord record = new CsvRecord();
+        record.Parse(line, delimiter);
+
+        Console.WriteLine($"\nParsed {record.Fields.Count} fields:");
+        for (int i = 0; i < record.Fields.Count; i++)
+        {
+            Console.WriteLine($"Field {i + 1}: {record.Fields[i]} (Type: {record.Fields[i].GetType().Name})");
+        }
+    }
+}
