@@ -1,0 +1,123 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Item
+{
+    public string Code;
+    public string Name;
+    public double UnitPrice;
+    public int CurrentStock;
+    public int MinStock;
+    public int[] SalesLast7Days;
+    public double UrgencyScore;
+
+    // Constructor
+    public Item(string code, string name, double price, int stock, int minStock, int[] sales)
+    {
+        Code = code;
+        Name = name;
+        UnitPrice = price;
+        CurrentStock = stock;
+        MinStock = minStock;
+        SalesLast7Days = sales;
+    }
+
+    // Calculate average daily sales over last 7 days
+    public double AverageDailySales()
+    {
+        return SalesLast7Days.Average();
+    }
+
+    // Determine if item needs reorder based on lead time
+    public bool NeedsReorder(int leadTimeDays)
+    {
+        double neededStock = AverageDailySales() * leadTimeDays;
+        UrgencyScore = neededStock - CurrentStock; // Higher means more urgent
+        return neededStock > CurrentStock;
+    }
+}
+
+class Program
+{
+    static int GetValidatedInt(string prompt)
+    {
+        int value;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (int.TryParse(Console.ReadLine(), out value) && value >= 0)
+                return value;
+            else
+                Console.WriteLine("Please enter a valid non-negative integer.");
+        }
+    }
+
+    static double GetValidatedDouble(string prompt)
+    {
+        double value;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out value) && value >= 0)
+                return value;
+            else
+                Console.WriteLine("Please enter a valid non-negative number.");
+        }
+    }
+
+    static void Main()
+    {
+        const int leadTime = 3; // Days to restock
+
+        Console.Write("Enter number of items to check: ");
+        int itemCount = GetValidatedInt("");
+
+        List<Item> items = new List<Item>();
+
+        for (int i = 0; i < itemCount; i++)
+        {
+            Console.WriteLine($"\n--- Item {i + 1} ---");
+            Console.Write("Item Code: ");
+            string code = Console.ReadLine();
+
+            Console.Write("Item Name: ");
+            string name = Console.ReadLine();
+
+            double price = GetValidatedDouble("Unit Price: ");
+            int stock = GetValidatedInt("Current Stock: ");
+            int minStock = GetValidatedInt("Minimum Required Stock: ");
+
+            Console.WriteLine("Enter sales for the last 7 days:");
+            int[] sales = new int[7];
+            for (int d = 0; d < 7; d++)
+            {
+                sales[d] = GetValidatedInt($"Day {d + 1} sales: ");
+            }
+
+            Item item = new Item(code, name, price, stock, minStock, sales);
+            item.NeedsReorder(leadTime); // Calculate urgency
+            items.Add(item);
+        }
+
+        // Filter items that need reorder
+        var reorderItems = items.Where(item => item.NeedsReorder(leadTime))
+                                .OrderByDescending(item => item.UrgencyScore)
+                                .ToList();
+
+        Console.WriteLine("\n=== Reorder List ===");
+        if (reorderItems.Count == 0)
+        {
+            Console.WriteLine("All stocks are sufficient.");
+        }
+        else
+        {
+            foreach (var item in reorderItems)
+            {
+                Console.WriteLine($"{item.Code} - {item.Name}");
+                Console.WriteLine($"  Avg Sales/Day: {item.AverageDailySales():F2}");
+                Console.WriteLine($"  Stock: {item.CurrentStock}, Urgency: {item.UrgencyScore:F2}");
+            }
+        }
+    }
+}
