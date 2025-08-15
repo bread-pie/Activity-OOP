@@ -1,1 +1,75 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Train
+{
+    public DateTime ArrivalTime { get; set; }
+    public string Source { get; set; }
+
+    public Train(string time, string source)
+    {
+        ArrivalTime = DateTime.ParseExact(time, "HH:mm", null);
+        Source = source;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Enter turnaround time (minutes): ");
+        int turnaround = int.Parse(Console.ReadLine());
+
+        Console.Write("Enter available platforms: ");
+        int platformCount = int.Parse(Console.ReadLine());
+
+        // Sample sorted times (from Line A and Line B)
+        List<Train> lineA = new List<Train>
+        {
+            new Train("08:00", "Line A"),
+            new Train("08:30", "Line A"),
+            new Train("09:00", "Line A")
+        };
+
+        List<Train> lineB = new List<Train>
+        {
+            new Train("08:15", "Line B"),
+            new Train("08:45", "Line B"),
+            new Train("09:15", "Line B")
+        };
+
+        // Merge both schedules
+        List<Train> merged = lineA.Concat(lineB)
+                                  .OrderBy(t => t.ArrivalTime)
+                                  .ToList();
+
+        List<DateTime> platformFreeAt = new List<DateTime>();
+        bool conflict = false;
+
+        Console.WriteLine("\nMerged Schedule and Platform Assignments:");
+        foreach (var train in merged)
+        {
+            // Remove platforms that are now free
+            platformFreeAt = platformFreeAt.Where(freeTime => freeTime > train.ArrivalTime).ToList();
+
+            if (platformFreeAt.Count < platformCount)
+            {
+                Console.WriteLine($"{train.ArrivalTime:HH:mm} - {train.Source} assigned to platform.");
+                platformFreeAt.Add(train.ArrivalTime.AddMinutes(turnaround));
+            }
+            else
+            {
+                Console.WriteLine($"{train.ArrivalTime:HH:mm} - {train.Source} → ⚠ Conflict! No platform available.");
+                conflict = true;
+            }
+        }
+
+        Console.WriteLine("\nResult:");
+        if (conflict)
+            Console.WriteLine("❌ Conflict detected due to insufficient platforms.");
+        else
+            Console.WriteLine("✅ Schedule successfully merged without conflict.");
+    }
+}
 
