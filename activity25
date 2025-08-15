@@ -1,1 +1,101 @@
+using System;
+
+class ParkingSession
+{
+    public DateTime EntryTime { get; private set; }
+    public DateTime ExitTime { get; private set; }
+
+    public ParkingSession(DateTime entry, DateTime exit)
+    {
+        if (exit < entry)
+            throw new ArgumentException("Exit time cannot be before entry time.");
+
+        EntryTime = entry;
+        ExitTime = exit;
+    }
+
+    // Get total parking hours rounded up
+    public int TotalHours()
+    {
+        TimeSpan duration = ExitTime - EntryTime;
+        int hours = (int)Math.Ceiling(duration.TotalHours);
+        return hours > 0 ? hours : 1; // minimum 1 hour
+    }
+
+    // Calculate fee using hourly rate
+    public decimal FeeHourly(decimal hourlyRate)
+    {
+        return TotalHours() * hourlyRate;
+    }
+
+    // Flat fee plan: fixed price regardless of hours
+    public decimal FeeFlat(decimal flatRate)
+    {
+        return flatRate;
+    }
+
+    // Progressive fee: e.g., first 2 hours $5 each, next hours $3 each
+    public decimal FeeProgressive(decimal firstHoursRate, int firstHoursCount, decimal nextHoursRate)
+    {
+        int hours = TotalHours();
+        if (hours <= firstHoursCount)
+            return hours * firstHoursRate;
+        else
+            return firstHoursCount * firstHoursRate + (hours - firstHoursCount) * nextHoursRate;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Parking Lot Fee Optimizer ===");
+
+        try
+        {
+            Console.Write("Enter entry time (yyyy-MM-dd HH:mm): ");
+            DateTime entry = DateTime.Parse(Console.ReadLine());
+
+            Console.Write("Enter exit time (yyyy-MM-dd HH:mm): ");
+            DateTime exit = DateTime.Parse(Console.ReadLine());
+
+            var session = new ParkingSession(entry, exit);
+
+            Console.WriteLine("Enter hourly rate:");
+            decimal hourlyRate = decimal.Parse(Console.ReadLine());
+
+            Console.WriteLine("Enter flat rate:");
+            decimal flatRate = decimal.Parse(Console.ReadLine());
+
+            Console.WriteLine("Enter progressive rate for first 2 hours:");
+            decimal firstRate = decimal.Parse(Console.ReadLine());
+
+            Console.WriteLine("Enter progressive rate for next hours:");
+            decimal nextRate = decimal.Parse(Console.ReadLine());
+
+            decimal hourlyFee = session.FeeHourly(hourlyRate);
+            decimal flatFee = session.FeeFlat(flatRate);
+            decimal progressiveFee = session.FeeProgressive(firstRate, 2, nextRate);
+
+            Console.WriteLine("\nFees by plan:");
+            Console.WriteLine($"Hourly plan: {hourlyFee:C}");
+            Console.WriteLine($"Flat plan: {flatFee:C}");
+            Console.WriteLine($"Progressive plan: {progressiveFee:C}");
+
+            decimal minFee = Math.Min(hourlyFee, Math.Min(flatFee, progressiveFee));
+            string bestPlan = minFee == hourlyFee ? "Hourly" :
+                              minFee == flatFee ? "Flat" : "Progressive";
+
+            Console.WriteLine($"\nBest plan: {bestPlan} with fee {minFee:C}");
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine("Invalid input format. Please try again.");
+        }
+        catch (ArgumentException e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+}
 
