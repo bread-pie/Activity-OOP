@@ -1,1 +1,82 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Movie
+{
+    public string Title;
+    public string Rating; // e.g., G, PG, PG-13, R
+    public int Duration; // minutes
+    public List<string> Tags;
+
+    public Movie(string title, string rating, int duration, List<string> tags)
+    {
+        Title = title;
+        Rating = rating.ToUpper();
+        Duration = duration;
+        Tags = tags.Select(t => t.ToLower()).ToList();
+    }
+}
+
+class Program
+{
+    static readonly List<string> AllowedRatings = new List<string> { "G", "PG", "PG-13", "R" };
+
+    static void Main()
+    {
+        Console.WriteLine("=== Movie Night Recommender ===");
+
+        // Sample catalog (can be replaced with user input)
+        var catalog = new List<Movie>
+        {
+            new Movie("Family Fun", "G", 90, new List<string>{"comedy", "family"}),
+            new Movie("Action Blast", "PG-13", 120, new List<string>{"action", "thriller"}),
+            new Movie("Romantic Tale", "PG", 105, new List<string>{"romance", "drama"}),
+            new Movie("Horror Night", "R", 100, new List<string>{"horror", "thriller"}),
+            new Movie("Comedy Hour", "PG", 85, new List<string>{"comedy"}),
+        };
+
+        Console.Write("Enter max duration (minutes): ");
+        int maxDuration = int.Parse(Console.ReadLine());
+
+        Console.Write("Enter allowed ratings (comma-separated, e.g., G,PG,R): ");
+        string ratingsInput = Console.ReadLine();
+        var allowedRatings = ratingsInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(r => r.Trim().ToUpper())
+            .Where(r => AllowedRatings.Contains(r))
+            .ToList();
+
+        Console.Write("Enter mood tag (optional, e.g., comedy, thriller): ");
+        string mood = Console.ReadLine().Trim().ToLower();
+
+        // Filter movies
+        var filtered = catalog.Where(m =>
+            m.Duration <= maxDuration &&
+            allowedRatings.Contains(m.Rating) &&
+            (string.IsNullOrEmpty(mood) || m.Tags.Contains(mood))
+        ).ToList();
+
+        if (filtered.Count == 0)
+        {
+            Console.WriteLine("No movies match your criteria.");
+            return;
+        }
+
+        // Tie-break by rating score (G=1, PG=2, PG-13=3, R=4)
+        Dictionary<string, int> ratingScores = new Dictionary<string, int>
+        {
+            {"G",1}, {"PG",2}, {"PG-13",3}, {"R",4}
+        };
+
+        var bestRatingScore = filtered.Min(m => ratingScores[m.Rating]);
+
+        var bestMovies = filtered.Where(m => ratingScores[m.Rating] == bestRatingScore).ToList();
+
+        Console.WriteLine("\nRecommended movies:");
+        foreach (var movie in bestMovies)
+        {
+            Console.WriteLine($"{movie.Title} - Rating: {movie.Rating}, Duration: {movie.Duration} mins");
+        }
+    }
+}
