@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Student
+{
+    public string Name;
+    public List<double> QuizScores;
+    public List<double> ExamScores;
+    public List<double> ProjectScores;
+    public double FinalNumericGrade;
+
+    public Student(string name, List<double> quizzes, List<double> exams, List<double> projects)
+    {
+        Name = name;
+        QuizScores = quizzes;
+        ExamScores = exams;
+        ProjectScores = projects;
+    }
+
+    // Calculate final weighted grade
+    public double FinalGrade(double quizWeight, double examWeight, double projectWeight)
+    {
+        double quizAvg = QuizScores.Average();
+        double examAvg = ExamScores.Average();
+        double projectAvg = ProjectScores.Average();
+
+        FinalNumericGrade = quizAvg * (quizWeight / 100) +
+                            examAvg * (examWeight / 100) +
+                            projectAvg * (projectWeight / 100);
+
+        return FinalNumericGrade;
+    }
+
+    // Get letter grade based on numeric grade
+    public string GetLetterGrade()
+    {
+        if (FinalNumericGrade >= 90) return "A";
+        else if (FinalNumericGrade >= 80) return "B";
+        else if (FinalNumericGrade >= 70) return "C";
+        else if (FinalNumericGrade >= 60) return "D";
+        else return "F";
+    }
+
+    // Get remark based on letter grade
+    public string GetRemark()
+    {
+        switch (GetLetterGrade())
+        {
+            case "A": return "Excellent";
+            case "B": return "Good";
+            case "C": return "Average";
+            case "D": return "Needs Improvement";
+            case "F": return "Failing";
+            default: return "Unknown";
+        }
+    }
+}
+
+class Program
+{
+    // Get validated numeric input between 0 and 100
+    static double GetValidatedScore(string prompt)
+    {
+        double score;
+        while (true)
+        {
+            Console.Write(prompt);
+            string input = Console.ReadLine();
+            if (double.TryParse(input, out score) && score >= 0 && score <= 100)
+                return score;
+            else
+                Console.WriteLine("Invalid score. Please enter a number between 0 and 100.");
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Student Grade Ledger ===");
+
+        // Get weight percentages
+        Console.WriteLine("\nEnter weights (must add up to 100):");
+        Console.Write("Quiz weight (%): ");
+        double quizWeight = double.Parse(Console.ReadLine());
+        Console.Write("Exam weight (%): ");
+        double examWeight = double.Parse(Console.ReadLine());
+        Console.Write("Project weight (%): ");
+        double projectWeight = double.Parse(Console.ReadLine());
+
+        if (quizWeight + examWeight + projectWeight != 100)
+        {
+            Console.WriteLine("Error: Weights must add up to 100.");
+            return;
+        }
+
+        Console.Write("\nEnter number of students: ");
+        int studentCount = int.Parse(Console.ReadLine());
+
+        List<Student> students = new List<Student>();
+
+        for (int i = 0; i < studentCount; i++)
+        {
+            Console.WriteLine($"\n--- Student {i + 1} ---");
+            Console.Write("Name: ");
+            string name = Console.ReadLine();
+
+            // Get quiz scores
+            Console.Write("How many quiz scores? ");
+            int nQuizzes = int.Parse(Console.ReadLine());
+            List<double> quizScores = new List<double>();
+            for (int q = 0; q < nQuizzes; q++)
+                quizScores.Add(GetValidatedScore($"Quiz {q + 1}: "));
+
+            // Get exam scores
+            Console.Write("How many exam scores? ");
+            int mExams = int.Parse(Console.ReadLine());
+            List<double> examScores = new List<double>();
+            for (int e = 0; e < mExams; e++)
+                examScores.Add(GetValidatedScore($"Exam {e + 1}: "));
+
+            // Get project scores
+            Console.Write("How many project scores? ");
+            int pProjects = int.Parse(Console.ReadLine());
+            List<double> projectScores = new List<double>();
+            for (int p = 0; p < pProjects; p++)
+                projectScores.Add(GetValidatedScore($"Project {p + 1}: "));
+
+            // Create and store student
+            Student s = new Student(name, quizScores, examScores, projectScores);
+            s.FinalGrade(quizWeight, examWeight, projectWeight);
+            students.Add(s);
+        }
+
+        // Sort students by final grade descending
+        var sortedStudents = students.OrderByDescending(s => s.FinalNumericGrade).ToList();
+
+        // Output summary
+        Console.WriteLine("\n=== Grade Summary ===");
+        foreach (var s in sortedStudents)
+        {
+            Console.WriteLine($"{s.Name} - {s.FinalNumericGrade:F2} - {s.GetLetterGrade()} ({s.GetRemark()})");
+        }
+
+        // Top 3 students
+        Console.WriteLine("\nTop 3 Students:");
+        foreach (var top in sortedStudents.Take(3))
+        {
+            Console.WriteLine($"{top.Name} - {top.FinalNumericGrade:F2}");
+        }
+
+        // Students below passing threshold (< 60)
+        Console.WriteLine("\nStudents Below Passing (F):");
+        foreach (var s in sortedStudents.Where(s => s.FinalNumericGrade < 60))
+        {
+            Console.WriteLine($"{s.Name} - {s.FinalNumericGrade:F2} - {s.GetLetterGrade()}");
+        }
+    }
+}
