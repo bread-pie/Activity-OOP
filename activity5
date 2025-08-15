@@ -1,0 +1,114 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Employee
+{
+    public string Name;
+    public double HourlyRate;
+    public double[] DailyHours; // 7 days
+    public double Gross, Net;
+
+    public Employee(string name, double rate, double[] hours)
+    {
+        Name = name;
+        HourlyRate = rate;
+        DailyHours = hours;
+    }
+
+    public double GrossPay()
+    {
+        double gross = 0;
+        double totalHours = DailyHours.Sum();
+
+        for (int i = 0; i < DailyHours.Length; i++)
+        {
+            double hours = DailyHours[i];
+            if (hours > 8)
+            {
+                gross += 8 * HourlyRate + (hours - 8) * HourlyRate * 1.5; // daily overtime
+            }
+            else
+            {
+                gross += hours * HourlyRate;
+            }
+        }
+
+        // Weekly overtime if total > 40
+        if (totalHours > 40)
+        {
+            double extra = totalHours - 40;
+            gross += extra * HourlyRate * 0.5; // premium already paid; add extra half
+        }
+
+        Gross = gross;
+        return gross;
+    }
+
+    public double NetPay()
+    {
+        double tax = 0;
+        if (Gross <= 1000) tax = 0;
+        else if (Gross <= 2000) tax = 0.10 * (Gross - 1000);
+        else if (Gross <= 3000) tax = 0.10 * 1000 + 0.15 * (Gross - 2000);
+        else tax = 0.10 * 1000 + 0.15 * 1000 + 0.20 * (Gross - 3000);
+
+        Net = Gross - tax;
+        return Net;
+    }
+}
+
+class Program
+{
+    static double GetValidatedDouble(string prompt)
+    {
+        double val;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out val) && val >= 0)
+                return val;
+            Console.WriteLine("Invalid number. Try again.");
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Payroll System ===");
+
+        Console.Write("Enter number of employees: ");
+        int count = int.Parse(Console.ReadLine());
+
+        List<Employee> employees = new List<Employee>();
+
+        for (int i = 0; i < count; i++)
+        {
+            Console.WriteLine($"\n--- Employee {i + 1} ---");
+
+            Console.Write("Name: ");
+            string name = Console.ReadLine();
+
+            double rate = GetValidatedDouble("Hourly Rate: ");
+
+            double[] hours = new double[7];
+            for (int d = 0; d < 7; d++)
+            {
+                hours[d] = GetValidatedDouble($"Hours worked on Day {d + 1}: ");
+            }
+
+            Employee emp = new Employee(name, rate, hours);
+            emp.GrossPay();
+            emp.NetPay();
+            employees.Add(emp);
+        }
+
+        // Sort by net pay descending
+        var sorted = employees.OrderByDescending(e => e.Net).ToList();
+
+        Console.WriteLine("\n=== Pay Slips ===");
+        foreach (var e in sorted)
+        {
+            Console.WriteLine($"{e.Name}: Gross = ₱{e.Gross:F2}, Net = ₱{e.Net:F2}");
+        }
+    }
+}
