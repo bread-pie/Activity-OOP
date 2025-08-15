@@ -1,1 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Course
+{
+    public string Code;
+    public string Name;
+    public List<string> Prerequisites;  // Course codes
+    public string TimeSlot;  // e.g., "Mon 9AM-11AM"
+
+    public Course(string code, string name, List<string> prereqs, string timeSlot)
+    {
+        Code = code.ToUpper();
+        Name = name;
+        Prerequisites = prereqs.Select(p => p.ToUpper()).ToList();
+        TimeSlot = timeSlot;
+    }
+
+    // Check if prerequisites are met
+    public bool CanEnroll(List<string> completedCourses, out List<string> missingPrereqs)
+    {
+        missingPrereqs = Prerequisites.Where(p => !completedCourses.Contains(p)).ToList();
+        return missingPrereqs.Count == 0;
+    }
+
+    // Check for schedule conflict
+    // For simplicity, time slot conflict if strings are equal
+    public static bool HasConflict(Course c1, Course c2)
+    {
+        return c1.TimeSlot == c2.TimeSlot;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Course Planner with Prerequisites ===");
+
+        // Input c
 
