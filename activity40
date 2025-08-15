@@ -1,1 +1,185 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+class Vault
+{
+    private string filePath = "vault.txt";
+    private string masterPassword;
+    private Dictionary<string, (string username, string password)> data = new();
+
+    public Vault(string masterPassword)
+    {
+        this.masterPassword = masterPassword;
+
+        if (File.Exists(filePath))
+            LoadVault();
+        else
+            SaveVault(); // create an empty file
+    }
+
+    // Simple encryption (NOT secure - just for learning)
+    private string Encrypt(string text)
+    {
+        return new string(text.Select(c => (char)(c + 2)).ToArray());
+    }
+
+    private string Decrypt(string text)
+    {
+        return new string(text.Select(c => (char)(c - 2)).ToArray());
+    }
+
+    private void LoadVault()
+    {
+        var lines = File.ReadAllLines(filePath);
+        if (lines.Length == 0 || Decrypt(lines[0]) != masterPassword)
+        {
+            Console.WriteLine("❌ Incorrect master password.");
+            Environment.Exit(0);
+        }
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var parts = lines[i].Split('|');
+            if (parts.Length == 3)
+            {
+                string service = Decrypt(parts[0]);
+                string user = Decrypt(parts[1]);
+                string pass = Decrypt(parts[2]);
+                data[service] = (user, pass);
+            }
+        }
+    }
+
+    private void SaveVault()
+    {
+        var lines = new List<string>();
+        lines.Add(Encrypt(masterPassword)); // Store encrypted master password
+
+        foreach (var kv in data)
+        {
+            string service = Encrypt(kv.Key);
+            string user = Encrypt(kv.Value.username);
+            string pass = Encrypt(kv.Value.password);
+            lines.Add($"{service}|{user}|{pass}");
+        }
+
+        File.WriteAllLines(filePath, lines);
+    }
+
+    public void Add(string service, string username, string password)
+    {
+        data[service] = (username, password);
+        SaveVault();
+        Console.WriteLine("✅ Credential added.");
+    }
+
+    public void List()
+    {
+        if (data.Count == 0)
+        {
+            Console.WriteLine("📂 Vault is empty.");
+            return;
+        }
+
+        Console.WriteLine("📋 Stored Services:");
+        foreach (var kv in data)
+        {
+            Console.WriteLine($"- {kv.Key} (user: {Mask(kv.Value.username)})");
+        }
+    }
+
+    public void Find(string service)
+    {
+        var matches = data
+            .Where(kv => kv.Key.Contains(service, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (matches.Count == 0)
+        {
+            Console.WriteLine("🔍 No matching service found.");
+        }
+        else
+        {
+            foreach (var kv in matches)
+            {
+                Console.WriteLine($"🔐 {kv.Key} → User: {kv.Value.username}, Password: {kv.Value.password}");
+            }
+        }
+    }
+
+    public void Remove(string service)
+    {
+        if (data.Remove(service))
+        {
+            SaveVault();
+            Console.WriteLine("🗑️ Entry removed.");
+        }
+        else
+        {
+            Console.WriteLine("❌ Service not found.");
+        }
+    }
+
+    private string Mask(string text)
+    {
+        if (text.Length <= 2) return "**";
+        return text.Substring(0, 1) + new string('*', text.Length - 2) + text[^1];
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("🔐 Enter master password: ");
+        string master = Console.ReadLine();
+
+        var vault = new Vault(master);
+
+        while (true)
+        {
+            Console.Write("\n📘 Command (add/list/find/remove/exit): ");
+            string cmd = Console.ReadLine().ToLower();
+
+            switch (cmd)
+            {
+                case "add":
+                    Console.Write("Service name: ");
+                    string service = Console.ReadLine();
+                    Console.Write("Username: ");
+                    string username = Console.ReadLine();
+                    Console.Write("Password: ");
+                    string password = Console.ReadLine();
+                    vault.Add(service, username, password);
+                    break;
+
+                case "list":
+                    vault.List();
+                    break;
+
+                case "find":
+                    Console.Write("Search service: ");
+                    string search = Console.ReadLine();
+                    vault.Find(search);
+                    break;
+
+                case "remove":
+                    Console.Write("Service to remove: ");
+                    string remove = Console.ReadLine();
+                    vault.Remove(remove);
+                    break;
+
+                case "exit":
+                    Console.WriteLine("👋 Exiting. Goodbye!");
+                    return;
+
+                default:
+                    Console.WriteLine("❓ Invalid command.");
+                    break;
+            }
+        }
+    }
+}
 
