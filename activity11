@@ -1,1 +1,107 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+class Account
+{
+    public string Username { get; private set; }
+    public string Password { get; private set; }
+
+    // Common weak words for password check
+    static readonly List<string> CommonWords = new List<string> {
+        "password", "123456", "qwerty", "abc123", "letmein"
+    };
+
+    public Account(string desiredUsername, string password, HashSet<string> existingUsernames)
+    {
+        Username = NormalizeUsername(desiredUsername);
+
+        // Handle duplicates by adding numeric suffix
+        string baseName = Username;
+        int suffix = 1;
+        while (existingUsernames.Contains(Username))
+        {
+            Username = baseName + suffix;
+            suffix++;
+        }
+
+        Password = password;
+    }
+
+    // Normalize username: lowercase, hyphenate spaces, trim
+    public static string NormalizeUsername(string username)
+    {
+        username = username.Trim().ToLower();
+        username = Regex.Replace(username, @"\s+", "-"); // replace spaces with hyphen
+        return username;
+    }
+
+    // Password strength rules:
+    // length >=8, contains uppercase, lowercase, digit, special char, no common words
+    public static bool IsStrongPassword(string password)
+    {
+        if (password.Length < 8)
+            return false;
+
+        if (!password.Any(char.IsUpper))
+            return false;
+
+        if (!password.Any(char.IsLower))
+            return false;
+
+        if (!password.Any(char.IsDigit))
+            return false;
+
+        if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
+            return false;
+
+        string pwLower = password.ToLower();
+        if (CommonWords.Any(word => pwLower.Contains(word)))
+            return false;
+
+        return true;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Username Normalizer & Strength Checker ===");
+
+        HashSet<string> usernames = new HashSet<string>();
+
+        Console.Write("How many accounts to create? ");
+        int count = int.Parse(Console.ReadLine());
+
+        for (int i = 0; i < count; i++)
+        {
+            Console.WriteLine($"\nAccount {i + 1}:");
+
+            Console.Write("Desired username: ");
+            string desiredUsername = Console.ReadLine();
+
+            Console.Write("Password: ");
+            string password = Console.ReadLine();
+
+            // Normalize and ensure unique username
+            Account acc = new Account(desiredUsername, password, usernames);
+
+            // Check password strength
+            if (!Account.IsStrongPassword(password))
+            {
+                Console.WriteLine("Warning: Password is NOT strong.");
+            }
+            else
+            {
+                Console.WriteLine("Password is strong.");
+            }
+
+            usernames.Add(acc.Username);
+
+            Console.WriteLine($"Final username: {acc.Username}");
+        }
+    }
+}
 
