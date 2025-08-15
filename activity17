@@ -1,1 +1,142 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Coupon
+{
+    public enum CouponType { PercentOff, AmountOff, FreeShip, Unknown }
+    public CouponType Type;
+    public double Value; // percentage or amount off
+    public string Code;
+
+    public Coupon(string code)
+    {
+        Code = code.ToUpper().Trim();
+
+        if (Code.EndsWith("OFF") && double.TryParse(Code.Substring(0, Code.Length - 3), out double amt))
+        {
+            Type = CouponType.AmountOff;
+            Value = amt;
+        }
+        else if (Code.EndsWith("%") && double.TryParse(Code.TrimEnd('%'), out double pct))
+        {
+            Type = CouponType.PercentOff;
+            Value = pct;
+        }
+        else if (Code == "FREESHIP")
+        {
+            Type = CouponType.FreeShip;
+            Value = 0;
+        }
+        else
+        {
+            Type = CouponType.Unknown;
+            Value = 0;
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== E-Commerce Coupon Stack Tester ===");
+        Console.Write("Enter cart total: ");
+        double cartTotal = double.Parse(Console.ReadLine());
+
+        Console.Write("Enter coupon codes separated by commas: ");
+        string input = Console.ReadLine();
+        var codes = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(c => c.Trim())
+            .Distinct()
+            .ToList();
+
+        List<Coupon> coupons = new List<Coupon>();
+        foreach (var code in codes)
+        {
+            var c = new Coupon(code);
+            if (c.Type == Coupon.CouponType.Unknown)
+            {
+                Console.WriteLine($"Warning: Coupon '{code}' is invalid and will be ignored.");
+            }
+            else
+            {
+                coupons.Add(c);
+            }
+        }
+
+        // Simple stack rule: Only one percent-off coupon allowed, free shipping can combine with amount or percent off
+
+        List<List<Coupon>> validStacks = new List<List<Coupon>>();
+
+        // Generate all subsets
+        int n = coupons.Count;
+        for (int mask = 0; mask < (1 << n); mask++)
+        {
+            var subset = new List<Coupon>();
+            int percentCount = 0;
+            bool hasFreeShip = false;
+            foreach (int i in Enumerable.Range(0, n))
+            {
+                if ((mask & (1 << i)) != 0)
+                {
+                    var cp = coupons[i];
+                    if (cp.Type == Coupon.CouponType.PercentOff) percentCount++;
+                    if (cp.Type == Coupon.CouponType.FreeShip) hasFreeShip = true;
+                    subset.Add(cp);
+                }
+            }
+            // Rule: max 1 percent off coupon allowed
+            if (percentCount <= 1)
+            {
+                // Also reject subsets with multiple free shipping? No, only one is enough.
+                validStacks.Add(subset);
+            }
+        }
+
+        double bestPayable = cartTotal;
+        List<Coupon> bestStack = new List<Coupon>();
+
+        foreach (var stack in validStacks)
+        {
+            double total = cartTotal;
+
+            // Apply amount off first
+            foreach (var c in stack.Where(c => c.Type == Coupon.CouponType.AmountOff))
+            {
+                total -= c.Value;
+            }
+
+            // Apply percent off next
+            var percentCoupon = stack.FirstOrDefault(c => c.Type == Coupon.CouponType.PercentOff);
+            if (percentCoupon != null)
+            {
+                total *= (1 - percentCoupon.Value / 100.0);
+            }
+
+            // Free shipping coupon ignored in calculation (assumed shipping separate or free)
+            // For demo, we don't add shipping cost.
+
+            if (total < 0) total = 0;
+
+            if (total < bestPayable)
+            {
+                bestPayable = total;
+                bestStack = stack;
+            }
+        }
+
+        Console.WriteLine($"\nBest coupon stack saves to: {bestPayable:F2}");
+        if (bestStack.Count > 0)
+        {
+            Console.WriteLine("Coupons applied:");
+            foreach (var c in bestStack)
+                Console.WriteLine($"- {c.Code}");
+        }
+        else
+        {
+            Console.WriteLine("No coupons applied.");
+        }
+    }
+}
