@@ -1,1 +1,169 @@
+using System;
+using System.Collections.Generic;
+
+class SeatingPlan
+{
+    public int Rows, Cols;
+    public string[,] Seats;
+    public List<(string, string)> MustSitWith;
+    public List<(string, string)> MustSeparate;
+    public List<string> People;
+
+    public SeatingPlan(int rows, int cols, List<string> people,
+        List<(string, string)> mustSitWith, List<(string, string)> mustSeparate)
+    {
+        Rows = rows;
+        Cols = cols;
+        Seats = new string[rows, cols];
+        People = people;
+        MustSitWith = mustSitWith;
+        MustSeparate = mustSeparate;
+    }
+
+    // Try to assign seats using backtracking
+    public bool AssignSeats()
+    {
+        return Backtrack(0);
+    }
+
+    bool Backtrack(int index)
+    {
+        if (index == People.Count)
+            return ValidateConstraints();
+
+        for (int r = 0; r < Rows; r++)
+        {
+            for (int c = 0; c < Cols; c++)
+            {
+                if (Seats[r, c] == null)
+                {
+                    Seats[r, c] = People[index];
+                    if (Backtrack(index + 1))
+                        return true;
+                    Seats[r, c] = null; // backtrack
+                }
+            }
+        }
+        return false;
+    }
+
+    // Check if current seating satisfies constraints
+    bool ValidateConstraints()
+    {
+        // Map person to seat position
+        var positions = new Dictionary<string, (int, int)>();
+        for (int r = 0; r < Rows; r++)
+            for (int c = 0; c < Cols; c++)
+                if (Seats[r, c] != null)
+                    positions[Seats[r, c]] = (r, c);
+
+        // Check must sit together (adjacent horizontally or vertically)
+        foreach (var pair in MustSitWith)
+        {
+            if (!positions.ContainsKey(pair.Item1) || !positions.ContainsKey(pair.Item2))
+                continue; // skip if not seated yet
+
+            var pos1 = positions[pair.Item1];
+            var pos2 = positions[pair.Item2];
+
+            if (!AreAdjacent(pos1, pos2))
+                return false;
+        }
+
+        // Check must separate (not adjacent)
+        foreach (var pair in MustSeparate)
+        {
+            if (!positions.ContainsKey(pair.Item1) || !positions.ContainsKey(pair.Item2))
+                continue;
+
+            var pos1 = positions[pair.Item1];
+            var pos2 = positions[pair.Item2];
+
+            if (AreAdjacent(pos1, pos2))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool AreAdjacent((int r, int c) a, (int r, int c) b)
+    {
+        int dr = Math.Abs(a.r - b.r);
+        int dc = Math.Abs(a.c - b.c);
+        return (dr == 1 && dc == 0) || (dr == 0 && dc == 1);
+    }
+
+    public void PrintSeating()
+    {
+        for (int r = 0; r < Rows; r++)
+        {
+            for (int c = 0; c < Cols; c++)
+            {
+                Console.Write(Seats[r, c] == null ? "[Empty]\t" : $"[{Seats[r, c]}]\t");
+            }
+            Console.WriteLine();
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Seating Chart Validator ===");
+
+        Console.Write("Enter number of rows: ");
+        int rows = int.Parse(Console.ReadLine());
+        Console.Write("Enter number of columns: ");
+        int cols = int.Parse(Console.ReadLine());
+
+        Console.Write("Enter number of people: ");
+        int pCount = int.Parse(Console.ReadLine());
+
+        List<string> people = new List<string>();
+        Console.WriteLine("Enter names:");
+        for (int i = 0; i < pCount; i++)
+        {
+            people.Add(Console.ReadLine());
+        }
+
+        Console.Write("Enter number of 'must sit with' pairs: ");
+        int mswCount = int.Parse(Console.ReadLine());
+        var mustSitWith = new List<(string, string)>();
+        for (int i = 0; i < mswCount; i++)
+        {
+            Console.WriteLine($"Pair {i + 1} (format: name1 name2):");
+            var parts = Console.ReadLine().Split();
+            mustSitWith.Add((parts[0], parts[1]));
+        }
+
+        Console.Write("Enter number of 'must separate' pairs: ");
+        int msCount = int.Parse(Console.ReadLine());
+        var mustSeparate = new List<(string, string)>();
+        for (int i = 0; i < msCount; i++)
+        {
+            Console.WriteLine($"Pair {i + 1} (format: name1 name2):");
+            var parts = Console.ReadLine().Split();
+            mustSeparate.Add((parts[0], parts[1]));
+        }
+
+        if (pCount > rows * cols)
+        {
+            Console.WriteLine("Error: Not enough seats for all people.");
+            return;
+        }
+
+        SeatingPlan plan = new SeatingPlan(rows, cols, people, mustSitWith, mustSeparate);
+
+        if (plan.AssignSeats())
+        {
+            Console.WriteLine("\nSeating plan found:");
+            plan.PrintSeating();
+        }
+        else
+        {
+            Console.WriteLine("No valid seating arrangement possible.");
+        }
+    }
+}
 
