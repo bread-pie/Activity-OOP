@@ -1,1 +1,121 @@
+using System;
+using System.Collections.Generic;
+
+class SensorStream
+{
+    private List<double> readings;
+    private int windowSize;
+    private double spikeThreshold;
+
+    public SensorStream(List<double> readings, int windowSize, double spikeThreshold)
+    {
+        if (windowSize <= 0 || windowSize > readings.Count)
+            throw new ArgumentException("Window size must be > 0 and <= number of readings.");
+
+        this.readings = readings;
+        this.windowSize = windowSize;
+        this.spikeThreshold = spikeThreshold;
+    }
+
+    // Moving average smoothing
+    public List<double> MovingAverage()
+    {
+        List<double> smoothed = new List<double>();
+
+        for (int i = 0; i < readings.Count; i++)
+        {
+            int start = Math.Max(0, i - windowSize + 1);
+            int count = i - start + 1;
+
+            double sum = 0;
+            for (int j = start; j <= i; j++)
+            {
+                sum += readings[j];
+            }
+            smoothed.Add(sum / count);
+        }
+
+        return smoothed;
+    }
+
+    // Detect spikes: difference between reading and moving average exceeds threshold
+    public List<int> DetectSpikes()
+    {
+        List<double> smoothed = MovingAverage();
+        List<int> spikeIndices = new List<int>();
+
+        for (int i = 0; i < readings.Count; i++)
+        {
+            double diff = Math.Abs(readings[i] - smoothed[i]);
+            if (diff > spikeThreshold)
+                spikeIndices.Add(i);
+        }
+
+        return spikeIndices;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Sensor Stream Smoother ===");
+
+        Console.Write("Enter number of readings: ");
+        if (!int.TryParse(Console.ReadLine(), out int n) || n <= 0)
+        {
+            Console.WriteLine("Invalid number.");
+            return;
+        }
+
+        List<double> readings = new List<double>();
+        Console.WriteLine("Enter readings separated by spaces:");
+        string[] tokens = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length != n)
+        {
+            Console.WriteLine("Number of readings does not match.");
+            return;
+        }
+
+        foreach (var t in tokens)
+        {
+            if (!double.TryParse(t, out double val))
+            {
+                Console.WriteLine("Invalid reading.");
+                return;
+            }
+            readings.Add(val);
+        }
+
+        Console.Write("Enter window size for smoothing: ");
+        if (!int.TryParse(Console.ReadLine(), out int window) || window <= 0 || window > n)
+        {
+            Console.WriteLine("Invalid window size.");
+            return;
+        }
+
+        Console.Write("Enter spike threshold: ");
+        if (!double.TryParse(Console.ReadLine(), out double threshold) || threshold < 0)
+        {
+            Console.WriteLine("Invalid threshold.");
+            return;
+        }
+
+        SensorStream sensor = new SensorStream(readings, window, threshold);
+        var smoothed = sensor.MovingAverage();
+        var spikes = sensor.DetectSpikes();
+
+        Console.WriteLine("\nSmoothed readings:");
+        for (int i = 0; i < smoothed.Count; i++)
+        {
+            Console.WriteLine($"Index {i}: {smoothed[i]:F2}");
+        }
+
+        Console.WriteLine("\nDetected spikes at indices:");
+        if (spikes.Count == 0)
+            Console.WriteLine("None");
+        else
+            Console.WriteLine(string.Join(", ", spikes));
+    }
+}
 
