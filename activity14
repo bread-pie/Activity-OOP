@@ -1,1 +1,93 @@
+using System;
+using System.Collections.Generic;
+
+class Booking
+{
+    public DateTime StartDate;
+    public DateTime EndDate;
+
+    public Booking(string startStr, string endStr)
+    {
+        if (!DateTime.TryParse(startStr, out StartDate))
+            throw new ArgumentException("Invalid start date.");
+        if (!DateTime.TryParse(endStr, out EndDate))
+            throw new ArgumentException("Invalid end date.");
+        if (EndDate < StartDate)
+            throw new ArgumentException("End date must be after start date.");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Date Range Aggregator (Bookings) ===");
+
+        Console.Write("Enter number of bookings: ");
+        int n = int.Parse(Console.ReadLine());
+
+        List<Booking> bookings = new List<Booking>();
+
+        for (int i = 0; i < n; i++)
+        {
+            Console.WriteLine($"Booking {i + 1}:");
+            string start = "";
+            string end = "";
+
+            while (true)
+            {
+                try
+                {
+                    Console.Write("Start date (yyyy-MM-dd): ");
+                    start = Console.ReadLine();
+                    Console.Write("End date (yyyy-MM-dd): ");
+                    end = Console.ReadLine();
+
+                    Booking b = new Booking(start, end);
+                    bookings.Add(b);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: " + ex.Message + " Please re-enter.");
+                }
+            }
+        }
+
+        // Aggregate counts per day for the month of the earliest booking
+        DateTime minDate = DateTime.MaxValue;
+        DateTime maxDate = DateTime.MinValue;
+        foreach (var b in bookings)
+        {
+            if (b.StartDate < minDate) minDate = b.StartDate;
+            if (b.EndDate > maxDate) maxDate = b.EndDate;
+        }
+
+        // Create dictionary for counts per day
+        Dictionary<DateTime, int> dailyCounts = new Dictionary<DateTime, int>();
+
+        DateTime day = minDate.Date;
+        while (day <= maxDate.Date)
+        {
+            dailyCounts[day] = 0;
+            day = day.AddDays(1);
+        }
+
+        // Count bookings per day (overlaps counted)
+        foreach (var b in bookings)
+        {
+            for (DateTime d = b.StartDate.Date; d <= b.EndDate.Date; d = d.AddDays(1))
+            {
+                dailyCounts[d]++;
+            }
+        }
+
+        // Output counts
+        Console.WriteLine("\nBookings count per day:");
+        foreach (var kvp in dailyCounts)
+        {
+            Console.WriteLine($"{kvp.Key:yyyy-MM-dd}: {kvp.Value}");
+        }
+    }
+}
 
