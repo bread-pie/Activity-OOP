@@ -1,1 +1,127 @@
+using System;
+
+class Parcel
+{
+    public double Length, Width, Height, Weight;
+    public string Zone;
+    public string Speed;
+
+    public Parcel(double length, double width, double height, double weight, string zone, string speed)
+    {
+        Length = length;
+        Width = width;
+        Height = height;
+        Weight = weight;
+        Zone = zone.ToUpper();
+        Speed = speed.ToLower();
+    }
+
+    // Calculate dimensional weight (e.g. L*W*H / 5000)
+    public double DimensionalWeight()
+    {
+        return (Length * Width * Height) / 5000.0;
+    }
+
+    // Returns billable weight = max(actual weight, dimensional weight)
+    public double BillableWeight()
+    {
+        return Math.Max(Weight, DimensionalWeight());
+    }
+
+    // Returns cost multiplier based on zone code
+    public double ZoneMultiplier()
+    {
+        switch (Zone)
+        {
+            case "A": return 1.0;
+            case "B": return 1.2;
+            case "C": return 1.5;
+            case "D": return 2.0;
+            default:
+                throw new ArgumentException("Invalid zone code.");
+        }
+    }
+
+    // Returns speed multiplier
+    public double SpeedMultiplier()
+    {
+        switch (Speed)
+        {
+            case "standard": return 1.0;
+            case "express": return 1.5;
+            default:
+                throw new ArgumentException("Invalid speed option.");
+        }
+    }
+}
+
+class Program
+{
+    static double GetPositiveDouble(string prompt)
+    {
+        double val;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out val) && val > 0)
+                return val;
+            Console.WriteLine("Invalid input, enter a positive number.");
+        }
+    }
+
+    static string GetZoneCode()
+    {
+        while (true)
+        {
+            Console.Write("Enter zone code (A/B/C/D): ");
+            string zone = Console.ReadLine().ToUpper();
+            if (zone == "A" || zone == "B" || zone == "C" || zone == "D")
+                return zone;
+            Console.WriteLine("Invalid zone code. Please enter A, B, C, or D.");
+        }
+    }
+
+    static string GetSpeed()
+    {
+        while (true)
+        {
+            Console.Write("Enter speed (standard/express): ");
+            string speed = Console.ReadLine().ToLower();
+            if (speed == "standard" || speed == "express")
+                return speed;
+            Console.WriteLine("Invalid speed. Please enter 'standard' or 'express'.");
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Parcel Shipping Estimator ===");
+
+        double length = GetPositiveDouble("Enter length (cm): ");
+        double width = GetPositiveDouble("Enter width (cm): ");
+        double height = GetPositiveDouble("Enter height (cm): ");
+        double weight = GetPositiveDouble("Enter weight (kg): ");
+
+        // Reject oversize parcels (example max size 150cm per dimension)
+        if (length > 150 || width > 150 || height > 150)
+        {
+            Console.WriteLine("Parcel size exceeds maximum allowed dimensions (150 cm).");
+            return;
+        }
+
+        string zone = GetZoneCode();
+        string speed = GetSpeed();
+
+        Parcel parcel = new Parcel(length, width, height, weight, zone, speed);
+
+        double billableWeight = parcel.BillableWeight();
+
+        double baseRatePerKg = 50; // example base rate in currency units per kg
+
+        double cost = billableWeight * baseRatePerKg * parcel.ZoneMultiplier() * parcel.SpeedMultiplier();
+
+        Console.WriteLine($"\nBillable Weight: {billableWeight:F2} kg");
+        Console.WriteLine($"Shipping Cost: ₱{cost:F2}");
+    }
+}
 
