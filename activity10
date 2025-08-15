@@ -1,1 +1,120 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
 
+class Transaction
+{
+    public DateTime Date;
+    public string Type; // "deposit" or "withdrawal"
+    public double Amount;
+    public string Memo;
+
+    public Transaction(string dateStr, string type, string amountStr, string memo)
+    {
+        // Parse date with validation
+        if (!DateTime.TryParseExact(dateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date))
+            throw new ArgumentException("Invalid date format. Use yyyy-MM-dd.");
+        Date = date;
+
+        type = type.ToLower();
+        if (type != "deposit" && type != "withdrawal")
+            throw new ArgumentException("Type must be 'deposit' or 'withdrawal'.");
+        Type = type;
+
+        if (!double.TryParse(amountStr, out double amt) || amt <= 0)
+            throw new ArgumentException("Amount must be a positive number.");
+        Amount = amt;
+
+        Memo = memo;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Bank Mini-Ledger with Reconciliation ===");
+
+        double openingBalance = GetDouble("Enter opening balance: ");
+
+        Console.Write("Enter number of transactions: ");
+        int n = int.Parse(Console.ReadLine());
+
+        List<Transaction> transactions = new List<Transaction>();
+        double runningBalance = openingBalance;
+        double suspiciousThreshold = 10000.0; // example threshold for flagging
+
+        for (int i = 0; i < n; i++)
+        {
+            Console.WriteLine($"\nTransaction {i + 1}:");
+
+            string date, type, memo;
+            double amount;
+
+            while (true)
+            {
+                try
+                {
+                    Console.Write("Date (yyyy-MM-dd): ");
+                    date = Console.ReadLine();
+
+                    Console.Write("Type (deposit/withdrawal): ");
+                    type = Console.ReadLine();
+
+                    Console.Write("Amount: ");
+                    string amtStr = Console.ReadLine();
+
+                    Console.Write("Memo: ");
+                    memo = Console.ReadLine();
+
+                    Transaction t = new Transaction(date, type, amtStr, memo);
+
+                    // Check overdraft for withdrawal
+                    if (t.Type == "withdrawal" && t.Amount > runningBalance)
+                    {
+                        Console.WriteLine("Error: Withdrawal amount exceeds current balance. Try again.");
+                        continue;
+                    }
+
+                    // Update running balance
+                    runningBalance = (t.Type == "deposit") ? runningBalance + t.Amount : runningBalance - t.Amount;
+
+                    transactions.Add(t);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Input error: " + ex.Message);
+                }
+            }
+        }
+
+        Console.WriteLine($"\nEnding balance according to ledger: {runningBalance:F2}");
+
+        double bankEndingBalance = GetDouble("Enter bank statement ending balance: ");
+        double variance = bankEndingBalance - runningBalance;
+
+        Console.WriteLine($"Variance (bank statement - ledger): {variance:F2}");
+
+        Console.WriteLine("\nSuspicious transactions (amount > " + suspiciousThreshold + "):");
+        foreach (var t in transactions)
+        {
+            if (t.Amount > suspiciousThreshold)
+            {
+                Console.WriteLine($"{t.Date:yyyy-MM-dd} {t.Type} {t.Amount:F2} Memo: {t.Memo}");
+            }
+        }
+    }
+
+    static double GetDouble(string prompt)
+    {
+        double val;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out val))
+                return val;
+            Console.WriteLine("Invalid input, enter a valid number.");
+        }
+    }
+}
