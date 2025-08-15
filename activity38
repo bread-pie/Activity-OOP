@@ -1,1 +1,156 @@
+using System;
+using System.Collections.Generic;
+
+class ShortUrl
+{
+    public string OriginalUrl { get; private set; }
+    public string ShortCode { get; private set; }
+    public List<DateTime> Visits { get; private set; }
+
+    public ShortUrl(string originalUrl, string shortCode)
+    {
+        OriginalUrl = originalUrl;
+        ShortCode = shortCode;
+        Visits = new List<DateTime>();
+    }
+
+    public void Visit()
+    {
+        Visits.Add(DateTime.Now);
+    }
+
+    public int TotalVisits()
+    {
+        return Visits.Count;
+    }
+
+    public int VisitsToday()
+    {
+        return Visits.FindAll(v => v.Date == DateTime.Today).Count;
+    }
+}
+
+class UrlShortener
+{
+    private Dictionary<string, ShortUrl> shortLinks = new Dictionary<string, ShortUrl>();
+    private int counter = 1000; // simple incrementing code base
+
+    public string GenerateShortCode()
+    {
+        return "x" + counter++.ToString();
+    }
+
+    public void AddUrl(string originalUrl, string customCode = "")
+    {
+        string code = string.IsNullOrWhiteSpace(customCode) ? GenerateShortCode() : customCode;
+
+        if (shortLinks.ContainsKey(code))
+        {
+            Console.WriteLine("❌ That short code is already taken.");
+            return;
+        }
+
+        shortLinks[code] = new ShortUrl(originalUrl, code);
+        Console.WriteLine($"✅ URL added with short code: {code}");
+    }
+
+    public void VisitUrl(string code)
+    {
+        if (shortLinks.ContainsKey(code))
+        {
+            shortLinks[code].Visit();
+            Console.WriteLine($"🌐 Visiting: {shortLinks[code].OriginalUrl}");
+        }
+        else
+        {
+            Console.WriteLine("❌ Short code not found.");
+        }
+    }
+
+    public void ShowStats(string code)
+    {
+        if (shortLinks.ContainsKey(code))
+        {
+            var link = shortLinks[code];
+            Console.WriteLine($"📊 Stats for {code}:");
+            Console.WriteLine($"Original URL: {link.OriginalUrl}");
+            Console.WriteLine($"Total Visits: {link.TotalVisits()}");
+            Console.WriteLine($"Today's Visits: {link.VisitsToday()}");
+        }
+        else
+        {
+            Console.WriteLine("❌ Short code not found.");
+        }
+    }
+
+    public void ListAll()
+    {
+        Console.WriteLine("\n📋 All short links:");
+        foreach (var kv in shortLinks)
+        {
+            Console.WriteLine($"{kv.Key} → {kv.Value.OriginalUrl} ({kv.Value.TotalVisits()} visits)");
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        UrlShortener shortener = new UrlShortener();
+        string input;
+
+        Console.WriteLine("🔗 Welcome to the URL Shortener Simulator");
+
+        do
+        {
+            Console.WriteLine("\nMenu:");
+            Console.WriteLine("1. Add URL");
+            Console.WriteLine("2. Visit URL");
+            Console.WriteLine("3. Show Stats");
+            Console.WriteLine("4. List All");
+            Console.WriteLine("0. Exit");
+            Console.Write("Enter your choice: ");
+            input = Console.ReadLine();
+
+            switch (input)
+            {
+                case "1":
+                    Console.Write("Enter original URL: ");
+                    string url = Console.ReadLine();
+
+                    Console.Write("Enter custom short code (optional): ");
+                    string custom = Console.ReadLine();
+
+                    shortener.AddUrl(url, custom);
+                    break;
+
+                case "2":
+                    Console.Write("Enter short code to visit: ");
+                    string code = Console.ReadLine();
+                    shortener.VisitUrl(code);
+                    break;
+
+                case "3":
+                    Console.Write("Enter short code for stats: ");
+                    string statCode = Console.ReadLine();
+                    shortener.ShowStats(statCode);
+                    break;
+
+                case "4":
+                    shortener.ListAll();
+                    break;
+
+                case "0":
+                    Console.WriteLine("👋 Exiting...");
+                    break;
+
+                default:
+                    Console.WriteLine("❌ Invalid option.");
+                    break;
+            }
+
+        } while (input != "0");
+    }
+}
 
