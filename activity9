@@ -38,5 +38,100 @@ class Program
     {
         Console.WriteLine("=== Course Planner with Prerequisites ===");
 
-        // Input c
+        // Input catalog
+        Console.Write("Enter number of courses in catalog: ");
+        int catalogCount = int.Parse(Console.ReadLine());
 
+        List<Course> catalog = new List<Course>();
+
+        for (int i = 0; i < catalogCount; i++)
+        {
+            Console.WriteLine($"\nCourse {i + 1}:");
+            Console.Write("Code: ");
+            string code = Console.ReadLine().ToUpper();
+
+            Console.Write("Name: ");
+            string name = Console.ReadLine();
+
+            Console.Write("Prerequisites (comma separated, or leave blank): ");
+            string prereqInput = Console.ReadLine();
+            List<string> prereqs = prereqInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                             .Select(s => s.Trim().ToUpper())
+                                             .ToList();
+
+            Console.Write("Time slot (e.g., Mon 9AM-11AM): ");
+            string timeSlot = Console.ReadLine();
+
+            catalog.Add(new Course(code, name, prereqs, timeSlot));
+        }
+
+        // Input completed courses
+        Console.Write("\nEnter completed courses (comma separated): ");
+        List<string> completed = Console.ReadLine()
+                                       .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => s.Trim().ToUpper())
+                                       .ToList();
+
+        // Input requested courses
+        Console.Write("Enter requested courses (comma separated): ");
+        List<string> requested = Console.ReadLine()
+                                       .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                       .Select(s => s.Trim().ToUpper())
+                                       .ToList();
+
+        // Process requested courses
+        List<Course> approved = new List<Course>();
+        List<(string code, List<string> reasons)> rejected = new List<(string, List<string>)>();
+
+        foreach (string reqCode in requested)
+        {
+            Course course = catalog.FirstOrDefault(c => c.Code == reqCode);
+            if (course == null)
+            {
+                rejected.Add((reqCode, new List<string> { "Course not found in catalog" }));
+                continue;
+            }
+
+            List<string> reasons = new List<string>();
+
+            // Check prerequisites
+            if (!course.CanEnroll(completed, out List<string> missingPrereqs))
+            {
+                reasons.Add("Missing prerequisites: " + string.Join(", ", missingPrereqs));
+            }
+
+            // Check schedule conflict with already approved courses
+            bool conflict = approved.Any(ac => Course.HasConflict(ac, course));
+            if (conflict)
+            {
+                reasons.Add("Schedule conflict with another approved course");
+            }
+
+            if (reasons.Count == 0)
+            {
+                approved.Add(course);
+            }
+            else
+            {
+                rejected.Add((reqCode, reasons));
+            }
+        }
+
+        // Output results
+        Console.WriteLine("\n--- Approved Courses ---");
+        foreach (var c in approved)
+        {
+            Console.WriteLine($"{c.Code} - {c.Name} ({c.TimeSlot})");
+        }
+
+        Console.WriteLine("\n--- Rejected Courses ---");
+        foreach (var (code, reasons) in rejected)
+        {
+            Console.WriteLine($"{code}:");
+            foreach (var reason in reasons)
+            {
+                Console.WriteLine($"  - {reason}");
+            }
+        }
+    }
+}
