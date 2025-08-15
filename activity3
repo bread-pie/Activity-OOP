@@ -1,0 +1,128 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class FareRule
+{
+    public double BaseRatePerKm;
+    public double PeakMultiplier;
+    public Dictionary<string, double> CategoryMultipliers;
+
+    public FareRule(double baseRate, double peakMultiplier)
+    {
+        BaseRatePerKm = baseRate;
+        PeakMultiplier = peakMultiplier;
+
+        // Fare multiplier by category
+        CategoryMultipliers = new Dictionary<string, double>()
+        {
+            { "ADULT", 1.0 },
+            { "STUDENT", 0.8 },
+            { "SENIOR", 0.7 }
+        };
+    }
+
+    public double CalculateFare(double distance, string timeSlot, string category)
+    {
+        double timeMultiplier = (timeSlot == "PEAK") ? PeakMultiplier : 1.0;
+        double categoryMultiplier = CategoryMultipliers.ContainsKey(category) ? CategoryMultipliers[category] : 1.0;
+
+        return BaseRatePerKm * distance * timeMultiplier * categoryMultiplier;
+    }
+}
+
+class Program
+{
+    // Get a valid double > 0
+    static double GetValidatedDistance(string prompt)
+    {
+        double val;
+        while (true)
+        {
+            Console.Write(prompt);
+            if (double.TryParse(Console.ReadLine(), out val) && val > 0)
+                return val;
+            Console.WriteLine("Please enter a valid positive number.");
+        }
+    }
+
+    // Parse best coupon from comma-separated string
+    static double ParseBestCoupon(string input)
+    {
+        string[] codes = input.ToUpper().Split(',');
+        Dictionary<string, double> validCoupons = new Dictionary<string, double>()
+        {
+            { "DISC10", 0.10 },
+            { "SAVE5", 0.05 },
+            { "HALFOFF", 0.50 }
+        };
+
+        double bestDiscount = 0.0;
+
+        foreach (string code in codes)
+        {
+            string trimmed = code.Trim();
+            if (validCoupons.ContainsKey(trimmed))
+            {
+                if (validCoupons[trimmed] > bestDiscount)
+                    bestDiscount = validCoupons[trimmed];
+            }
+        }
+
+        return bestDiscount;
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Bus Fare Calculator ===");
+
+        double distance = GetValidatedDistance("Enter trip distance (km): ");
+
+        Console.Write("Enter time slot (peak/off-peak): ");
+        string timeSlot = Console.ReadLine().Trim().ToUpper();
+        if (timeSlot != "PEAK" && timeSlot != "OFF-PEAK")
+        {
+            Console.WriteLine("Invalid time slot. Defaulting to OFF-PEAK.");
+            timeSlot = "OFF-PEAK";
+        }
+
+        Console.Write("Enter passenger type (adult/student/senior): ");
+        string category = Console.ReadLine().Trim().ToUpper();
+
+        switch (category)
+        {
+            case "ADULT":
+                Console.WriteLine("Full fare will be applied.");
+                break;
+            case "STUDENT":
+                Console.WriteLine("Student discount applied.");
+                break;
+            case "SENIOR":
+                Console.WriteLine("Senior citizen discount applied.");
+                break;
+            default:
+                Console.WriteLine("Unknown category. Defaulting to ADULT.");
+                category = "ADULT";
+                break;
+        }
+
+        Console.Write("Enter coupon codes (comma-separated): ");
+        string couponInput = Console.ReadLine();
+
+        double discountRate = ParseBestCoupon(couponInput);
+
+        // Setup fare rules
+        FareRule fareRule = new FareRule(baseRate: 5.0, peakMultiplier: 1.2);
+
+        // Calculate base fare
+        double baseFare = fareRule.CalculateFare(distance, timeSlot, category);
+
+        // Apply best coupon
+        double discountAmount = baseFare * discountRate;
+        double finalFare = baseFare - discountAmount;
+
+        Console.WriteLine($"\nBase Fare: {baseFare:C2}");
+        Console.WriteLine($"Best Coupon Applied: {discountRate * 100}% => -{discountAmount:C2}");
+        Console.WriteLine($"Final Fare: {finalFare:C2}");
+    }
+}
