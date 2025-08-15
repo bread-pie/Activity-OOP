@@ -1,1 +1,71 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+class Email
+{
+    public string FullEmail { get; private set; }
+    public string Username { get; private set; }
+    public string Domain { get; private set; }
+    public bool IsValid { get; private set; }
+
+    private static Regex emailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase);
+
+    public Email(string email)
+    {
+        FullEmail = email.Trim().ToLower();
+        IsValid = emailRegex.IsMatch(FullEmail);
+
+        if (IsValid)
+        {
+            var parts = FullEmail.Split('@');
+            Username = parts[0];
+            Domain = parts[1];
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Email Validator & Grouper ===");
+        Console.WriteLine("Enter comma-separated emails:");
+
+        string input = Console.ReadLine();
+        var emailStrings = input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+        var emails = new List<Email>();
+        foreach (var e in emailStrings)
+        {
+            emails.Add(new Email(e));
+        }
+
+        var invalidEmails = emails.Where(em => !em.IsValid).Select(em => em.FullEmail).ToList();
+        var validEmails = emails.Where(em => em.IsValid);
+
+        Console.WriteLine("\nInvalid emails:");
+        if (invalidEmails.Count == 0)
+            Console.WriteLine("  None");
+        else
+            foreach (var inv in invalidEmails)
+                Console.WriteLine($"  {inv}");
+
+        // Group valid emails by domain (sorted)
+        var grouped = validEmails
+            .GroupBy(em => em.Domain)
+            .OrderBy(g => g.Key);
+
+        Console.WriteLine("\nValid emails grouped by domain:");
+        foreach (var group in grouped)
+        {
+            Console.WriteLine($"Domain: {group.Key}");
+            foreach (var em in group.OrderBy(e => e.Username))
+            {
+                Console.WriteLine($"  {em.FullEmail}");
+            }
+        }
+    }
+}
 
