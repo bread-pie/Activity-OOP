@@ -1,1 +1,128 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Asset
+{
+    public string Currency;
+    public decimal Amount;
+
+    public Asset(string currency, decimal amount)
+    {
+        Currency = currency.ToUpper();
+        Amount = amount;
+    }
+}
+
+class FxRate
+{
+    public DateTime Date;
+    public string Currency;
+    public decimal Rate; // Home currency per unit
+
+    public FxRate(DateTime date, string currency, decimal rate)
+    {
+        Date = date;
+        Currency = currency.ToUpper();
+        Rate = rate;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Exchange Rate Portfolio Evaluator ===");
+
+        // Input assets
+        Console.Write("Enter number of assets: ");
+        int assetCount = int.Parse(Console.ReadLine());
+
+        var assets = new List<Asset>();
+        for (int i = 0; i < assetCount; i++)
+        {
+            Console.WriteLine($"Asset {i + 1} (format: currency amount):");
+            var parts = Console.ReadLine().Split();
+            if (parts.Length != 2 
+                || !decimal.TryParse(parts[1], out decimal amt)
+                || amt < 0)
+            {
+                Console.WriteLine("Invalid input, try again.");
+                i--;
+                continue;
+            }
+            assets.Add(new Asset(parts[0], amt));
+        }
+
+        // Input FX rates
+        Console.Write("Enter number of FX rate entries: ");
+        int rateCount = int.Parse(Console.ReadLine());
+
+        var fxRates = new List<FxRate>();
+        for (int i = 0; i < rateCount; i++)
+        {
+            Console.WriteLine($"FX Rate {i + 1} (format: yyyy-MM-dd currency rate):");
+            var parts = Console.ReadLine().Split();
+            if (parts.Length != 3
+                || !DateTime.TryParse(parts[0], out DateTime date)
+                || !decimal.TryParse(parts[2], out decimal rate)
+                || rate <= 0)
+            {
+                Console.WriteLine("Invalid input, try again.");
+                i--;
+                continue;
+            }
+            fxRates.Add(new FxRate(date, parts[1], rate));
+        }
+
+        // Get valuation date (latest date from FX rates)
+        var valuationDate = fxRates.Max(r => r.Date);
+
+        // For each currency, get latest FX rate on or before valuation date
+        var latestRates = new Dictionary<string, decimal>();
+        var currencies = assets.Select(a => a.Currency).Distinct();
+
+        foreach (var curr in currencies)
+        {
+            var ratesForCurr = fxRates
+                .Where(r => r.Currency == curr && r.Date <= valuationDate)
+                .OrderByDescending(r => r.Date)
+                .ToList();
+
+            if (ratesForCurr.Count == 0)
+            {
+                Console.WriteLine($"No FX rate found for {curr} on or before {valuationDate:yyyy-MM-dd}, skipping asset.");
+                continue;
+            }
+            latestRates[curr] = ratesForCurr.First().Rate;
+        }
+
+        // Calculate asset values and total portfolio value
+        var assetValues = new List<(string Currency, decimal Amount, decimal Value)>();
+        decimal totalValue = 0m;
+
+        foreach (var asset in assets)
+        {
+            if (!latestRates.ContainsKey(asset.Currency))
+                continue; // skip assets without valid FX rates
+
+            decimal value = asset.Amount * latestRates[asset.Currency];
+            assetValues.Add((asset.Currency, asset.Amount, value));
+            totalValue += value;
+        }
+
+        // Sort assets by value descending
+        var sortedAssets = assetValues.OrderByDescending(a => a.Value).ToList();
+
+        Console.WriteLine($"\nValuation date: {valuationDate:yyyy-MM-dd}");
+        Console.WriteLine("Assets valued in home currency:");
+
+        foreach (var a in sortedAssets)
+        {
+            Console.WriteLine($"{a.Currency} {a.Amount} units = {a.Value:C}");
+        }
+
+        Console.WriteLine($"\nTotal portfolio value: {totalValue:C}");
+    }
+}
