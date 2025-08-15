@@ -1,1 +1,100 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
+class Ingredient
+{
+    public string Name { get; }
+    public double Quantity { get; private set; }
+    public string Unit { get; }
+
+    public Ingredient(string name, double quantity, string unit)
+    {
+        Name = name.ToLower(); // normalize name
+        Quantity = quantity;
+        Unit = unit.ToLower(); // normalize unit
+    }
+
+    public Ingredient Scale(double factor)
+    {
+        return new Ingredient(Name, Quantity * factor, Unit);
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Enter base servings: ");
+        int baseServings = int.Parse(Console.ReadLine());
+
+        Console.Write("Enter target servings: ");
+        int targetServings = int.Parse(Console.ReadLine());
+
+        double scaleFactor = (double)targetServings / baseServings;
+
+        // Sample recipe
+        List<Ingredient> recipe = new List<Ingredient>
+        {
+            new Ingredient("Flour", 2.0, "cups"),
+            new Ingredient("Sugar", 1.0, "cups"),
+            new Ingredient("Eggs", 2.0, "pcs"),
+            new Ingredient("Milk", 1.5, "cups")
+        };
+
+        // Sample pantry
+        Dictionary<string, Ingredient> pantry = new Dictionary<string, Ingredient>
+        {
+            { "flour", new Ingredient("Flour", 3.0, "cups") },
+            { "sugar", new Ingredient("Sugar", 0.5, "cups") },
+            { "eggs", new Ingredient("Eggs", 4.0, "pcs") },
+            { "milk", new Ingredient("Milk", 1.0, "cups") }
+        };
+
+        Console.WriteLine("\nScaled Recipe for " + targetServings + " servings:");
+        List<Ingredient> scaledRecipe = new List<Ingredient>();
+
+        foreach (var ingredient in recipe)
+        {
+            var scaled = ingredient.Scale(scaleFactor);
+            scaledRecipe.Add(scaled);
+            Console.WriteLine($"- {scaled.Name}: {scaled.Quantity:F2} {scaled.Unit}");
+        }
+
+        Console.WriteLine("\nShopping List (what you're missing):");
+        bool allGood = true;
+
+        foreach (var ing in scaledRecipe)
+        {
+            if (pantry.ContainsKey(ing.Name))
+            {
+                var available = pantry[ing.Name];
+                if (available.Unit == ing.Unit)
+                {
+                    if (available.Quantity < ing.Quantity)
+                    {
+                        double shortage = ing.Quantity - available.Quantity;
+                        Console.WriteLine($"- {ing.Name}: need {shortage:F2} more {ing.Unit}");
+                        allGood = false;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"⚠ Unit mismatch for {ing.Name}");
+                    allGood = false;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"- {ing.Name}: need {ing.Quantity:F2} {ing.Unit} (not in pantry)");
+                allGood = false;
+            }
+        }
+
+        if (allGood)
+        {
+            Console.WriteLine("✅ All ingredients available in pantry.");
+        }
+    }
+}
 
