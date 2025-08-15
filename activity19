@@ -1,1 +1,116 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Question
+{
+    public string Text;
+    public string Topic;
+    public string Difficulty; // e.g., Easy, Medium, Hard
+
+    public Question(string text, string topic, string difficulty)
+    {
+        Text = text;
+        Topic = topic.ToLower();
+        Difficulty = difficulty.ToLower();
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Quiz Randomizer with Blueprint ===");
+
+        // Sample question bank
+        var questionBank = new List<Question>
+        {
+            new Question("Q1", "math", "easy"),
+            new Question("Q2", "math", "medium"),
+            new Question("Q3", "math", "hard"),
+            new Question("Q4", "science", "easy"),
+            new Question("Q5", "science", "medium"),
+            new Question("Q6", "science", "hard"),
+            new Question("Q7", "history", "easy"),
+            new Question("Q8", "history", "medium"),
+            new Question("Q9", "history", "hard")
+        };
+
+        // Blueprint: dictionary with topic+difficulty as key, required count as value
+        // For example: math-easy:2, science-medium:1
+        var blueprint = new Dictionary<(string, string), int>();
+
+        Console.Write("Enter number of blueprint entries: ");
+        int bpCount = int.Parse(Console.ReadLine());
+
+        for (int i = 0; i < bpCount; i++)
+        {
+            Console.WriteLine($"Entry {i + 1} (format: topic difficulty count):");
+            var parts = Console.ReadLine().Split();
+            if (parts.Length != 3)
+            {
+                Console.WriteLine("Invalid input, try again.");
+                i--;
+                continue;
+            }
+            string topic = parts[0].ToLower();
+            string diff = parts[1].ToLower();
+            if (!int.TryParse(parts[2], out int count) || count < 0)
+            {
+                Console.WriteLine("Invalid count, try again.");
+                i--;
+                continue;
+            }
+            blueprint[(topic, diff)] = count;
+        }
+
+        Console.Write("Enter random seed (integer): ");
+        if (!int.TryParse(Console.ReadLine(), out int seed))
+        {
+            Console.WriteLine("Invalid seed, defaulting to 0.");
+            seed = 0;
+        }
+
+        var rng = new Random(seed);
+        var selectedQuestions = new List<Question>();
+
+        bool enoughQuestions = true;
+
+        foreach (var entry in blueprint)
+        {
+            string topic = entry.Key.Item1;
+            string diff = entry.Key.Item2;
+            int requiredCount = entry.Value;
+
+            var pool = questionBank
+                .Where(q => q.Topic == topic && q.Difficulty == diff)
+                .ToList();
+
+            if (pool.Count < requiredCount)
+            {
+                Console.WriteLine($"Not enough questions for {topic} {diff} (required {requiredCount}, available {pool.Count})");
+                enoughQuestions = false;
+            }
+            else
+            {
+                // Randomly pick requiredCount questions from pool without repetition
+                var shuffled = pool.OrderBy(_ => rng.Next()).Take(requiredCount);
+                selectedQuestions.AddRange(shuffled);
+            }
+        }
+
+        if (!enoughQuestions)
+        {
+            Console.WriteLine("Quiz generation failed due to insufficient questions.");
+            return;
+        }
+
+        Console.WriteLine("\nGenerated Quiz Questions:");
+        int qNum = 1;
+        foreach (var q in selectedQuestions)
+        {
+            Console.WriteLine($"{qNum++}. [{q.Topic} - {q.Difficulty}] {q.Text}");
+        }
+    }
+}
