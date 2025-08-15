@@ -1,1 +1,126 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class UserFitness
+{
+    public string Name;
+    public int[] Steps;     // 7 days
+    public int[] Calories;  // 7 days
+    public int StepGoal;
+    public int CalorieGoal;
+
+    public UserFitness(string name, int[] steps, int[] calories, int stepGoal, int calorieGoal)
+    {
+        Name = name;
+        Steps = steps;
+        Calories = calories;
+        StepGoal = stepGoal;
+        CalorieGoal = calorieGoal;
+    }
+
+    // Average steps
+    public double AverageSteps()
+    {
+        return Steps.Average();
+    }
+
+    // Average calories
+    public double AverageCalories()
+    {
+        return Calories.Average();
+    }
+
+    // Returns day index (0-based) with highest steps
+    public int BestStepDay()
+    {
+        int maxSteps = Steps.Max();
+        return Array.IndexOf(Steps, maxSteps);
+    }
+
+    // Checks if user met goals on at least 5 days
+    public bool OnTrack()
+    {
+        int daysMet = 0;
+        for (int i = 0; i < 7; i++)
+        {
+            if (Steps[i] >= StepGoal && Calories[i] <= CalorieGoal)
+                daysMet++;
+        }
+        return daysMet >= 5;
+    }
+}
+
+class Program
+{
+    static int[] GetValidatedIntArray(string prompt, int length)
+    {
+        while (true)
+        {
+            Console.Write(prompt);
+            string input = Console.ReadLine();
+            string[] parts = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length != length)
+            {
+                Console.WriteLine($"Please enter exactly {length} comma-separated integers.");
+                continue;
+            }
+
+            int[] values = new int[length];
+            bool valid = true;
+
+            for (int i = 0; i < length; i++)
+            {
+                if (!int.TryParse(parts[i].Trim(), out values[i]) || values[i] < 0)
+                {
+                    Console.WriteLine("All values must be non-negative integers.");
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid) return values;
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Fitness Tracker Weekly Report ===");
+
+        Console.Write("Enter number of users: ");
+        int userCount = int.Parse(Console.ReadLine());
+
+        List<UserFitness> users = new List<UserFitness>();
+
+        for (int i = 0; i < userCount; i++)
+        {
+            Console.WriteLine($"\n--- User {i + 1} ---");
+            Console.Write("Name: ");
+            string name = Console.ReadLine();
+
+            int[] steps = GetValidatedIntArray("Enter 7 days of steps (comma-separated): ", 7);
+            int[] calories = GetValidatedIntArray("Enter 7 days of calories (comma-separated): ", 7);
+
+            Console.Write("Step goal per day: ");
+            int stepGoal = int.Parse(Console.ReadLine());
+
+            Console.Write("Calorie goal per day (max): ");
+            int calorieGoal = int.Parse(Console.ReadLine());
+
+            users.Add(new UserFitness(name, steps, calories, stepGoal, calorieGoal));
+        }
+
+        Console.WriteLine("\n--- Report ---");
+
+        foreach (var user in users)
+        {
+            Console.WriteLine($"\nUser: {user.Name}");
+            Console.WriteLine($"Average Steps: {user.AverageSteps():F2}");
+            Console.WriteLine($"Average Calories: {user.AverageCalories():F2}");
+            Console.WriteLine($"Best Step Day: Day {user.BestStepDay() + 1}");
+            Console.WriteLine($"On Track (>=5 days meeting goals): {(user.OnTrack() ? "Yes" : "No")}");
+        }
+    }
+}
 
