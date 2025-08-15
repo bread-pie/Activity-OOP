@@ -1,0 +1,119 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+
+class LibraryItem
+{
+    public string Type;
+    public DateTime DueDate;
+    public DateTime ReturnDate;
+    public double FeeAmount;
+
+    public LibraryItem(string type, DateTime due, DateTime ret)
+    {
+        Type = type;
+        DueDate = due;
+        ReturnDate = ret;
+    }
+
+    // Calculate number of late days (after 2-day amnesty)
+    public int LateDays()
+    {
+        int daysLate = (ReturnDate - DueDate).Days;
+        return (daysLate > 2) ? daysLate - 2 : 0;
+    }
+
+    // Calculate fee based on type and cap
+    public double Fee()
+    {
+        int days = LateDays();
+        double rate = 0;
+
+        switch (Type.ToLower())
+        {
+            case "book":
+                rate = 5;
+                break;
+            case "dvd":
+                rate = 10;
+                break;
+            case "mag":
+                rate = 3;
+                break;
+            default:
+                Console.WriteLine("Unknown item type. Assuming book.");
+                rate = 5;
+                break;
+        }
+
+        FeeAmount = Math.Min(days * rate, 100); // Apply cap
+        return FeeAmount;
+    }
+}
+
+class Program
+{
+    static DateTime GetValidatedDate(string prompt)
+    {
+        DateTime date;
+        while (true)
+        {
+            Console.Write(prompt);
+            string input = Console.ReadLine();
+            if (DateTime.TryParseExact(input, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
+                return date;
+            Console.WriteLine("Invalid date format. Use yyyy-MM-dd.");
+        }
+    }
+
+    static void Main()
+    {
+        Console.WriteLine("=== Library Late Fee Simulator ===");
+        Console.Write("Enter number of borrowed items: ");
+        int itemCount = int.Parse(Console.ReadLine());
+
+        List<LibraryItem> items = new List<LibraryItem>();
+
+        for (int i = 0; i < itemCount; i++)
+        {
+            Console.WriteLine($"\n--- Item {i + 1} ---");
+            Console.Write("Enter item type (book/DVD/mag): ");
+            string type = Console.ReadLine().Trim().ToLower();
+
+            DateTime dueDate = GetValidatedDate("Enter due date (yyyy-MM-dd): ");
+            DateTime returnDate = GetValidatedDate("Enter return date (yyyy-MM-dd): ");
+
+            if (returnDate < dueDate)
+            {
+                Console.WriteLine("Warning: Returned early. No fee applied.");
+                returnDate = dueDate; // Prevent negative fee
+            }
+
+            var item = new LibraryItem(type, dueDate, returnDate);
+            item.Fee();
+            items.Add(item);
+        }
+
+        // Display fees
+        Console.WriteLine("\n=== Fee Summary ===");
+        double totalFees = 0;
+        LibraryItem highestFeeItem = null;
+
+        foreach (var item in items)
+        {
+            Console.WriteLine($"{item.Type.ToUpper()} | Late Days: {item.LateDays()} | Fee: ₱{item.FeeAmount:F2}");
+            totalFees += item.FeeAmount;
+
+            if (highestFeeItem == null || item.FeeAmount > highestFeeItem.FeeAmount)
+                highestFeeItem = item;
+        }
+
+        Console.WriteLine($"\nTotal Fees: ₱{totalFees:F2}");
+
+        if (highestFeeItem != null)
+        {
+            Console.WriteLine($"Highest Fee Item: {highestFeeItem.Type.ToUpper()} - ₱{highestFeeItem.FeeAmount:F2}");
+        }
+    }
+}
