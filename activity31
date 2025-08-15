@@ -1,0 +1,163 @@
+using System;
+
+class Account
+{
+    private string Pin;
+    private decimal Balance;
+    private int FailedAttempts;
+    private bool Locked;
+
+    public Account(string pin, decimal initialBalance)
+    {
+        Pin = pin;
+        Balance = initialBalance;
+        FailedAttempts = 0;
+        Locked = false;
+    }
+
+    public bool TryAuthenticate(string inputPin)
+    {
+        if (Locked)
+        {
+            Console.WriteLine("Account locked due to too many failed attempts.");
+            return false;
+        }
+
+        if (inputPin == Pin)
+        {
+            FailedAttempts = 0;
+            return true;
+        }
+        else
+        {
+            FailedAttempts++;
+            Console.WriteLine($"Incorrect PIN. Attempts left: {3 - FailedAttempts}");
+            if (FailedAttempts >= 3)
+            {
+                Locked = true;
+                Console.WriteLine("Account locked due to too many failed attempts.");
+            }
+            return false;
+        }
+    }
+
+    public void ShowBalance()
+    {
+        Console.WriteLine($"Current balance: {Balance:C2}");
+    }
+
+    public void Deposit(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            Console.WriteLine("Deposit amount must be positive.");
+            return;
+        }
+        Balance += amount;
+        Console.WriteLine($"Deposited {amount:C2}. New balance: {Balance:C2}");
+    }
+
+    public void Withdraw(decimal amount)
+    {
+        if (amount <= 0)
+        {
+            Console.WriteLine("Withdrawal amount must be positive.");
+            return;
+        }
+        if (amount > Balance)
+        {
+            Console.WriteLine("Insufficient funds for withdrawal.");
+            return;
+        }
+        Balance -= amount;
+        Console.WriteLine($"Withdrew {amount:C2}. New balance: {Balance:C2}");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Mini ATM ===");
+
+        // Get PIN
+        string pin;
+        while (true)
+        {
+            Console.Write("Set your 4-digit PIN: ");
+            pin = Console.ReadLine() ?? "";
+            if (pin.Length == 4 && int.TryParse(pin, out _))
+                break;
+            Console.WriteLine("Invalid PIN. Must be exactly 4 digits.");
+        }
+
+        // Get initial balance
+        decimal initialBalance;
+        while (true)
+        {
+            Console.Write("Enter initial balance: ");
+            string? balStr = Console.ReadLine();
+            if (decimal.TryParse(balStr, out initialBalance) && initialBalance >= 0)
+                break;
+            Console.WriteLine("Invalid balance. Must be a non-negative number.");
+        }
+
+        Account account = new Account(pin, initialBalance);
+
+        // Authenticate user
+        bool authenticated = false;
+        for (int i = 0; i < 3 && !authenticated; i++)
+        {
+            Console.Write("Enter your PIN to access account: ");
+            string? enteredPin = Console.ReadLine() ?? "";
+            if (account.TryAuthenticate(enteredPin))
+                authenticated = true;
+        }
+
+        if (!authenticated)
+        {
+            Console.WriteLine("Access denied.");
+            return;
+        }
+
+        // Main menu loop
+        while (true)
+        {
+            Console.WriteLine("\nMenu:");
+            Console.WriteLine("1. Check Balance");
+            Console.WriteLine("2. Deposit");
+            Console.WriteLine("3. Withdraw");
+            Console.WriteLine("4. Exit");
+            Console.Write("Choose option (1-4): ");
+            string? option = Console.ReadLine();
+
+            switch (option)
+            {
+                case "1":
+                    account.ShowBalance();
+                    break;
+                case "2":
+                    Console.Write("Enter deposit amount: ");
+                    if (decimal.TryParse(Console.ReadLine(), out decimal depAmount))
+                        account.Deposit(depAmount);
+                    else
+                        Console.WriteLine("Invalid amount.");
+                    break;
+                case "3":
+                    Console.Write("Enter withdrawal amount: ");
+                    if (decimal.TryParse(Console.ReadLine(), out decimal withAmount))
+                        account.Withdraw(withAmount);
+                    else
+                        Console.WriteLine("Invalid amount.");
+                    break;
+                case "4":
+                    Console.WriteLine("Thank you for using Mini ATM.");
+                    return;
+                default:
+                    Console.WriteLine("Invalid option. Please choose 1-4.");
+                    break;
+            }
+        }
+    }
+}
+
