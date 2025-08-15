@@ -1,1 +1,85 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Seller
+{
+    public string Name { get; }
+    public List<double> Ratings { get; }
+    public int TotalSales { get; }
+    public int Cancellations { get; }
+    public string Badge { get; private set; }
+
+    public Seller(string name, List<double> ratings, int sales, int cancellations)
+    {
+        Name = name;
+        Ratings = ratings;
+        TotalSales = sales;
+        Cancellations = cancellations;
+        Badge = AssignBadge();
+    }
+
+    public double AverageRating()
+    {
+        return Ratings.Count == 0 ? 0 : Ratings.Average();
+    }
+
+    public double CancellationRate()
+    {
+        return TotalSales == 0 ? 0 : ((double)Cancellations / TotalSales) * 100;
+    }
+
+    private string AssignBadge()
+    {
+        double avg = AverageRating();
+        double cancelRate = CancellationRate();
+
+        // Simple switch-based logic
+        switch (true)
+        {
+            case true when avg >= 4.8 && cancelRate < 1 && TotalSales >= 100:
+                return "Platinum";
+            case true when avg >= 4.5 && cancelRate < 2 && TotalSales >= 50:
+                return "Gold";
+            case true when avg >= 4.0 && cancelRate < 5 && TotalSales >= 10:
+                return "Silver";
+            default:
+                return "Bronze";
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        // Sample sellers (you can modify or extend this list)
+        List<Seller> sellers = new List<Seller>
+        {
+            new Seller("Alice", new List<double> { 4.9, 5.0, 4.8 }, 120, 1),
+            new Seller("Bob", new List<double> { 4.6, 4.7, 4.4 }, 60, 1),
+            new Seller("Charlie", new List<double> { 4.2, 4.0, 3.9 }, 20, 1),
+            new Seller("Dave", new List<double> { 3.5, 3.8, 4.0 }, 5, 0)
+        };
+
+        // Sort: First by Badge rank (Platinum > Gold > Silver > Bronze), then by avg rating
+        var badgeRank = new Dictionary<string, int>
+        {
+            { "Platinum", 1 }, { "Gold", 2 }, { "Silver", 3 }, { "Bronze", 4 }
+        };
+
+        var leaderboard = sellers.OrderBy(s => badgeRank[s.Badge])
+                                 .ThenByDescending(s => s.AverageRating())
+                                 .ThenByDescending(s => s.TotalSales);
+
+        Console.WriteLine("Leaderboard:");
+        Console.WriteLine("----------------------------------------");
+        Console.WriteLine("Name     | Avg Rating | Canc. Rate | Badge");
+        Console.WriteLine("----------------------------------------");
+        foreach (var s in leaderboard)
+        {
+            Console.WriteLine($"{s.Name,-8} | {s.AverageRating(),10:F2} | {s.CancellationRate(),10:F2}% | {s.Badge}");
+        }
+    }
+}
 
