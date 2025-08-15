@@ -1,1 +1,162 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
+class Student
+{
+    public string Name;
+    public Student(string name)
+    {
+        Name = name;
+    }
+}
+
+class SeatGrid
+{
+    private string[,] grid;
+    private List<Student> students;
+    private List<(string, string)> friends;
+    private List<(string, string)> flaggedPairs;
+    private int rows, cols;
+    private Random rand;
+
+    public SeatGrid(List<Student> students, List<(string, string)> friends, List<(string, string)> flaggedPairs, int rows, int cols, int seed = 42)
+    {
+        this.students = students;
+        this.friends = friends;
+        this.flaggedPairs = flaggedPairs;
+        this.rows = rows;
+        this.cols = cols;
+        grid = new string[rows, cols];
+        rand = new Random(seed);
+    }
+
+    public bool AssignSeats()
+    {
+        // Shuffle student list
+        var shuffled = students.Select(s => s.Name).OrderBy(s => rand.Next()).ToList();
+
+        if (shuffled.Count > rows * cols)
+        {
+            Console.WriteLine("❌ Too many students for available seats.");
+            return false;
+        }
+
+        // Fill grid row by row
+        int index = 0;
+        for (int r = 0; r < rows && index < shuffled.Count; r++)
+        {
+            for (int c = 0; c < cols && index < shuffled.Count; c++)
+            {
+                grid[r, c] = shuffled[index++];
+            }
+        }
+
+        return true;
+    }
+
+    public void PrintSeating()
+    {
+        Console.WriteLine("\n🪑 Seating Arrangement:");
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                Console.Write((grid[r, c] ?? "EMPTY").PadRight(12));
+            }
+            Console.WriteLine();
+        }
+    }
+
+    private List<(string, string)> GetAdjacentPairs()
+    {
+        var pairs = new List<(string, string)>();
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                string current = grid[r, c];
+                if (current == null) continue;
+
+                // Right neighbor
+                if (c < cols - 1 && grid[r, c + 1] != null)
+                    pairs.Add((current, grid[r, c + 1]));
+
+                // Down neighbor
+                if (r < rows - 1 && grid[r + 1, c] != null)
+                    pairs.Add((current, grid[r + 1, c]));
+            }
+        }
+        return pairs;
+    }
+
+    public void ValidateSeating()
+    {
+        var adjPairs = GetAdjacentPairs();
+        int violationCount = 0;
+
+        foreach (var (a, b) in adjPairs)
+        {
+            if (flaggedPairs.Any(p =>
+                (p.Item1 == a && p.Item2 == b) || (p.Item1 == b && p.Item2 == a)))
+            {
+                Console.WriteLine($"❌ Violation: {a} and {b} are flagged but seated adjacent.");
+                violationCount++;
+            }
+        }
+
+        if (violationCount == 0)
+            Console.WriteLine("✅ No flagged pair violations.");
+
+        // Optional: validate friend clustering
+        foreach (var (a, b) in friends)
+        {
+            if (!adjPairs.Any(p =>
+                (p.Item1 == a && p.Item2 == b) || (p.Item1 == b && p.Item2 == a)))
+            {
+                Console.WriteLine($"⚠️ Note: Friends {a} and {b} are not seated together.");
+            }
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        // Sample input
+        var students = new List<Student>
+        {
+            new Student("Alice"),
+            new Student("Bob"),
+            new Student("Charlie"),
+            new Student("Diana"),
+            new Student("Eve"),
+            new Student("Frank")
+        };
+
+        var friends = new List<(string, string)>
+        {
+            ("Alice", "Bob"),
+            ("Charlie", "Diana")
+        };
+
+        var flaggedPairs = new List<(string, string)>
+        {
+            ("Eve", "Frank"),
+            ("Bob", "Charlie")
+        };
+
+        // Grid size
+        int rows = 2;
+        int cols = 3;
+
+        var grid = new SeatGrid(students, friends, flaggedPairs, rows, cols);
+
+        if (grid.AssignSeats())
+        {
+            grid.PrintSeating();
+            grid.ValidateSeating();
+        }
+    }
+}
