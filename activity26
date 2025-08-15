@@ -1,1 +1,146 @@
+using System;
+using System.Collections.Generic;
+
+class Box
+{
+    public int Capacity { get; private set; }
+    public int CurrentWeight { get; private set; }
+    public List<int> Items { get; private set; }
+
+    public Box(int capacity)
+    {
+        Capacity = capacity;
+        CurrentWeight = 0;
+        Items = new List<int>();
+    }
+
+    // Try to add an item weight to the box, return true if fits
+    public bool TryAdd(int weight)
+    {
+        if (weight < 0) return false; // reject negative weights
+        if (CurrentWeight + weight <= Capacity)
+        {
+            Items.Add(weight);
+            CurrentWeight += weight;
+            return true;
+        }
+        return false;
+    }
+
+    public double FillRatio()
+    {
+        return (double)CurrentWeight / Capacity;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Shipment Box Packer ===");
+
+        Console.Write("Enter box capacity (weight): ");
+        if (!int.TryParse(Console.ReadLine(), out int boxCapacity) || boxCapacity <= 0)
+        {
+            Console.WriteLine("Invalid box capacity.");
+            return;
+        }
+
+        Console.Write("Enter number of items: ");
+        if (!int.TryParse(Console.ReadLine(), out int itemCount) || itemCount <= 0)
+        {
+            Console.WriteLine("Invalid number of items.");
+            return;
+        }
+
+        var items = new List<int>();
+        for (int i = 1; i <= itemCount; i++)
+        {
+            Console.Write($"Enter weight of item #{i}: ");
+            if (!int.TryParse(Console.ReadLine(), out int w) || w <= 0)
+            {
+                Console.WriteLine("Invalid weight, must be positive.");
+                return;
+            }
+            items.Add(w);
+        }
+
+        Console.WriteLine("Choose packing strategy: 1=First Fit, 2=Best Fit");
+        string choice = Console.ReadLine();
+
+        List<Box> boxes = new List<Box>();
+
+        if (choice == "1") // First Fit
+        {
+            foreach (var item in items)
+            {
+                bool packed = false;
+                foreach (var box in boxes)
+                {
+                    if (box.TryAdd(item))
+                    {
+                        packed = true;
+                        break;
+                    }
+                }
+                if (!packed)
+                {
+                    var newBox = new Box(boxCapacity);
+                    newBox.TryAdd(item);
+                    boxes.Add(newBox);
+                }
+            }
+        }
+        else if (choice == "2") // Best Fit
+        {
+            foreach (var item in items)
+            {
+                Box bestBox = null;
+                int minSpaceLeft = int.MaxValue;
+
+                foreach (var box in boxes)
+                {
+                    int spaceLeft = box.Capacity - box.CurrentWeight;
+                    if (item <= spaceLeft && spaceLeft - item < minSpaceLeft)
+                    {
+                        bestBox = box;
+                        minSpaceLeft = spaceLeft - item;
+                    }
+                }
+
+                if (bestBox != null)
+                {
+                    bestBox.TryAdd(item);
+                }
+                else
+                {
+                    var newBox = new Box(boxCapacity);
+                    newBox.TryAdd(item);
+                    boxes.Add(newBox);
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine("Invalid strategy choice.");
+            return;
+        }
+
+        Console.WriteLine("\nPacking results:");
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            var box = boxes[i];
+            Console.WriteLine($"Box #{i + 1}: Items = [{string.Join(", ", box.Items)}], " +
+                              $"Total Weight = {box.CurrentWeight}, Fill Ratio = {box.FillRatio():P1}");
+        }
+
+        int sumItems = 0;
+        foreach (var b in boxes) sumItems += b.CurrentWeight;
+        int sumInput = 0;
+        foreach (var w in items) sumInput += w;
+
+        Console.WriteLine($"\nTotal weight packed: {sumItems}");
+        Console.WriteLine($"Total input weight: {sumInput}");
+    }
+}
 
