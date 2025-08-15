@@ -1,1 +1,74 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+class Review
+{
+    public string Text { get; private set; }
+    public int Score { get; private set; } // +1 positive, -1 negative, 0 neutral
+
+    private static HashSet<string> positiveWords;
+    private static HashSet<string> negativeWords;
+
+    public Review(string text, HashSet<string> posWords, HashSet<string> negWords)
+    {
+        Text = text;
+        positiveWords = posWords;
+        negativeWords = negWords;
+        Score = AnalyzeSentiment();
+    }
+
+    private int AnalyzeSentiment()
+    {
+        // Tokenize: lowercase, remove punctuation
+        var tokens = Regex.Matches(Text.ToLower(), @"\b\w+\b")
+                          .Select(m => m.Value)
+                          .ToList();
+
+        int posCount = tokens.Count(t => positiveWords.Contains(t));
+        int negCount = tokens.Count(t => negativeWords.Contains(t));
+
+        if (posCount > negCount) return 1;
+        else if (negCount > posCount) return -1;
+        else return 0;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Product Review Sentiment Tallier ===");
+
+        // Sample positive and negative words (could be extended)
+        var positiveWords = new HashSet<string> { "good", "great", "excellent", "love", "awesome", "nice", "best" };
+        var negativeWords = new HashSet<string> { "bad", "terrible", "awful", "hate", "worst", "poor", "disappointing" };
+
+        Console.WriteLine("Enter number of reviews:");
+        if (!int.TryParse(Console.ReadLine(), out int n) || n <= 0)
+        {
+            Console.WriteLine("Invalid number.");
+            return;
+        }
+
+        var reviews = new List<Review>();
+
+        for (int i = 1; i <= n; i++)
+        {
+            Console.WriteLine($"Enter review #{i}:");
+            string text = Console.ReadLine();
+            reviews.Add(new Review(text, positiveWords, negativeWords));
+        }
+
+        int positiveCount = reviews.Count(r => r.Score == 1);
+        int negativeCount = reviews.Count(r => r.Score == -1);
+        int neutralCount = reviews.Count(r => r.Score == 0);
+
+        Console.WriteLine("\nReview sentiment summary:");
+        Console.WriteLine($"Positive reviews: {positiveCount}");
+        Console.WriteLine($"Negative reviews: {negativeCount}");
+        Console.WriteLine($"Neutral reviews: {neutralCount}");
+    }
+}
 
