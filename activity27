@@ -1,1 +1,115 @@
+using System;
+using System.Collections.Generic;
+
+class Attendance
+{
+    public string StudentName { get; private set; }
+    public int[] Presence { get; private set; } // 1 for present, 0 for absent
+
+    public Attendance(string name, int[] presenceArray)
+    {
+        if (presenceArray.Length != 30)
+            throw new ArgumentException("Presence array must be length 30.");
+
+        StudentName = name;
+        Presence = presenceArray;
+    }
+
+    // Calculate longest streak of consecutive presence (1s)
+    public int Streak()
+    {
+        int maxStreak = 0;
+        int current = 0;
+        foreach (var day in Presence)
+        {
+            if (day == 1)
+            {
+                current++;
+                if (current > maxStreak)
+                    maxStreak = current;
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+        return maxStreak;
+    }
+
+    // Calculate absence rate as fraction of days absent
+    public double AbsenceRate()
+    {
+        int absentDays = 0;
+        foreach (var day in Presence)
+        {
+            if (day == 0)
+                absentDays++;
+        }
+        return (double)absentDays / Presence.Length;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Classroom Attendance Analyzer ===");
+
+        Console.Write("Enter number of students: ");
+        if (!int.TryParse(Console.ReadLine(), out int studentCount) || studentCount <= 0)
+        {
+            Console.WriteLine("Invalid number.");
+            return;
+        }
+
+        var students = new List<Attendance>();
+
+        for (int i = 0; i < studentCount; i++)
+        {
+            Console.Write($"Enter name of student #{i + 1}: ");
+            string name = Console.ReadLine();
+
+            Console.WriteLine("Enter 30 attendance values (1 for present, 0 for absent), separated by spaces:");
+            string[] tokens = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (tokens.Length != 30)
+            {
+                Console.WriteLine("Attendance must have exactly 30 values.");
+                return;
+            }
+
+            int[] presence = new int[30];
+            for (int j = 0; j < 30; j++)
+            {
+                if (!int.TryParse(tokens[j], out int val) || (val != 0 && val != 1))
+                {
+                    Console.WriteLine("Values must be 0 or 1.");
+                    return;
+                }
+                presence[j] = val;
+            }
+
+            students.Add(new Attendance(name, presence));
+        }
+
+        Console.WriteLine("\nAnalysis:");
+        const double absenceThreshold = 0.2; // 20% absence
+        const int minStreak = 5;
+
+        foreach (var student in students)
+        {
+            int streak = student.Streak();
+            double absenceRate = student.AbsenceRate();
+
+            Console.WriteLine($"Student: {student.StudentName}");
+            Console.WriteLine($" - Longest presence streak: {streak}");
+            Console.WriteLine($" - Absence rate: {absenceRate:P1}");
+
+            if (absenceRate > absenceThreshold)
+                Console.WriteLine(" - Flagged: High absence rate.");
+            if (streak < minStreak)
+                Console.WriteLine(" - Flagged: Low attendance streak.");
+        }
+    }
+}
 
