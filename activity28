@@ -1,1 +1,160 @@
+using System;
+
+class BudgetPlan
+{
+    public double TotalBudget { get; private set; }
+    public double[] PriorityWeights { get; private set; } // e.g. stay, transport, food, misc
+    public double[] HardMinima { get; private set; }      // minimum amounts per category
+    public double[] Allocations { get; private set; }
+    public int TripDays { get; private set; }
+
+    public BudgetPlan(double totalBudget, double[] priorityWeights, double[] hardMinima, int tripDays)
+    {
+        if (priorityWeights.Length != hardMinima.Length)
+            throw new ArgumentException("Weights and minima must have same length.");
+        if (tripDays <= 0)
+            throw new ArgumentException("Trip days must be positive.");
+        if (totalBudget <= 0)
+            throw new ArgumentException("Budget must be positive.");
+
+        TotalBudget = totalBudget;
+        PriorityWeights = priorityWeights;
+        HardMinima = hardMinima;
+        TripDays = tripDays;
+        Allocations = new double[priorityWeights.Length];
+
+        Allocate();
+    }
+
+    private void Allocate()
+    {
+        // Normalize weights sum to 1
+        double weightSum = 0;
+        foreach (var w in PriorityWeights)
+            weightSum += w;
+
+        if (weightSum == 0)
+            throw new ArgumentException("Sum of priority weights cannot be zero.");
+
+        for (int i = 0; i < PriorityWeights.Length; i++)
+            PriorityWeights[i] /= weightSum;
+
+        // Initial allocation by weights
+        for (int i = 0; i < Allocations.Length; i++)
+            Allocations[i] = TotalBudget * PriorityWeights[i];
+
+        // Adjust allocations to meet hard minima
+        double adjustmentNeeded = 0;
+
+        for (int i = 0; i < Allocations.Length; i++)
+        {
+            if (Allocations[i] < HardMinima[i])
+            {
+                adjustmentNeeded += HardMinima[i] - Allocations[i];
+                Allocations[i] = HardMinima[i];
+            }
+        }
+
+        if (adjustmentNeeded > 0)
+        {
+            // Reduce from categories above minima proportionally
+            double totalAboveMin = 0;
+            for (int i = 0; i < Allocations.Length; i++)
+            {
+                double aboveMin = Allocations[i] - HardMinima[i];
+                if (aboveMin > 0) totalAboveMin += aboveMin;
+            }
+
+            if (totalAboveMin < adjustmentNeeded)
+            {
+                throw new Exception("Cannot meet hard minima within budget.");
+            }
+
+            for (int i = 0; i < Allocations.Length; i++)
+            {
+                double aboveMin = Allocations[i] - HardMinima[i];
+                if (aboveMin > 0)
+                {
+                    double reduction = (aboveMin / totalAboveMin) * adjustmentNeeded;
+                    Allocations[i] -= reduction;
+                }
+            }
+        }
+    }
+
+    public void PrintPerDayBudget()
+    {
+        Console.WriteLine("\nPer-day budget allocation:");
+        for (int i = 0; i < Allocations.Length; i++)
+        {
+            double perDay = Allocations[i] / TripDays;
+            Console.WriteLine($"Category #{i + 1}: Total = {Allocations[i]:C2}, Per day = {perDay:C2}");
+        }
+
+        double sumAlloc = 0;
+        foreach (var a in Allocations)
+            sumAlloc += a;
+
+        Console.WriteLine($"Total allocated: {sumAlloc:C2} (Budget: {TotalBudget:C2})");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== Travel Planner Budget Split ===");
+
+        Console.Write("Enter total budget: ");
+        if (!double.TryParse(Console.ReadLine(), out double budget) || budget <= 0)
+        {
+            Console.WriteLine("Invalid budget.");
+            return;
+        }
+
+        Console.Write("Enter number of categories (e.g. stay, transport, food, misc): ");
+        if (!int.TryParse(Console.ReadLine(), out int categories) || categories <= 0)
+        {
+            Console.WriteLine("Invalid number of categories.");
+            return;
+        }
+
+        double[] weights = new double[categories];
+        double[] minima = new double[categories];
+
+        for (int i = 0; i < categories; i++)
+        {
+            Console.Write($"Enter priority weight for category #{i + 1}: ");
+            if (!double.TryParse(Console.ReadLine(), out weights[i]) || weights[i] < 0)
+            {
+                Console.WriteLine("Invalid weight.");
+                return;
+            }
+
+            Console.Write($"Enter hard minimum amount for category #{i + 1}: ");
+            if (!double.TryParse(Console.ReadLine(), out minima[i]) || minima[i] < 0)
+            {
+                Console.WriteLine("Invalid minimum.");
+                return;
+            }
+        }
+
+        Console.Write("Enter trip days: ");
+        if (!int.TryParse(Console.ReadLine(), out int days) || days <= 0)
+        {
+            Console.WriteLine("Invalid days.");
+            return;
+        }
+
+        try
+        {
+            BudgetPlan plan = new BudgetPlan(budget, weights, minima, days);
+            plan.PrintPerDayBudget();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+}
 
