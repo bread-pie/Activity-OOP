@@ -1,1 +1,118 @@
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+class FileName
+{
+    public string BaseName { get; private set; }
+    public int Version { get; private set; }  // 0 means no version suffix
+
+    private static Regex versionRegex = new Regex(@"\(v(\d+)\)$", RegexOptions.IgnoreCase);
+
+    public FileName(string name)
+    {
+        name = name.Trim();
+
+        var match = versionRegex.Match(name);
+        if (match.Success)
+        {
+            BaseName = name.Substring(0, match.Index).Trim();
+            Version = int.Parse(match.Groups[1].Value);
+        }
+        else
+        {
+            BaseName = name;
+            Version = 0;
+        }
+    }
+
+    public override string ToString()
+    {
+        return Version > 0 ? $"{BaseName}(v{Version})" : BaseName;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.WriteLine("=== File Name Versioning ===");
+
+        // Existing files
+        Console.WriteLine("Enter existing file names (comma-separated):");
+        string existingInput = Console.ReadLine();
+        var existingNames = ParseFileNames(existingInput);
+
+        // New incoming files
+        Console.WriteLine("Enter new file names to add (comma-separated):");
+        string newInput = Console.ReadLine();
+        var newNames = ParseFileNames(newInput);
+
+        // Combine existing files into a dictionary for quick lookup (case-insensitive)
+        var allFiles = new Dictionary<string, HashSet<int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var fn in existingNames)
+        {
+            AddFileName(allFiles, fn);
+        }
+
+        Console.WriteLine("\nAssigning versions to new files...");
+        var assignedNames = new List<FileName>();
+
+        foreach (var fn in newNames)
+        {
+            string baseName = fn.BaseName;
+            int version = 0;
+
+            if (!allFiles.ContainsKey(baseName))
+            {
+                allFiles[baseName] = new HashSet<int>();
+            }
+
+            // Find next available version number
+            while (allFiles[baseName].Contains(version))
+            {
+                version++;
+            }
+
+            var assigned = new FileName(baseName) { };
+            assigned = new FileName(baseName);
+            if (version > 0)
+            {
+                // assign version
+                assigned = new FileName($"{baseName}(v{version})");
+            }
+
+            allFiles[baseName].Add(version);
+            assignedNames.Add(assigned);
+        }
+
+        Console.WriteLine("\nFinal list of files:");
+        foreach (var file in existingNames)
+        {
+            Console.WriteLine(file.ToString());
+        }
+        foreach (var file in assignedNames)
+        {
+            Console.WriteLine(file.ToString());
+        }
+    }
+
+    static List<FileName> ParseFileNames(string input)
+    {
+        var list = new List<FileName>();
+        var parts = input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            list.Add(new FileName(part));
+        }
+        return list;
+    }
+
+    static void AddFileName(Dictionary<string, HashSet<int>> dict, FileName fn)
+    {
+        if (!dict.ContainsKey(fn.BaseName))
+            dict[fn.BaseName] = new HashSet<int>();
+        dict[fn.BaseName].Add(fn.Version);
+    }
+}
 
